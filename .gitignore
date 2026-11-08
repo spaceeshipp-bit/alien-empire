@@ -5,6 +5,13 @@
 /client/sim/
 /worker/sim/
 
+# Sim core libraries built from sim/native by tools/build_sim_native.sh, and
+# SCons's object files and state
+/sim/bin/
+/sim/native/**/*.os
+/sim/native/**/*.o
+/sim/native/.sconsign*.dblite
+
 # Android build template installed by Godot, plus build outputs
 /client/android/
 /build/
