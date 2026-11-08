@@ -32,7 +32,11 @@ func _check_card(check: LabCheck) -> Control:
 	var status: Label = Ui.label(check.availability(), 22, Ui.MUTED)
 	card.add_child(status)
 	var output: Label = Ui.label("", 20, Ui.TEXT)
-	var run_button: Button = Ui.button("Run check", func() -> void:
+	var run_button: Button = Ui.button("Run check", func() -> void: pass)
+	# One run at a time: a second tap would mix the plugin's answers to both
+	# runs. Every run ends in finished, if only through its timeout.
+	run_button.pressed.connect(func() -> void:
+		run_button.disabled = true
 		output.text = ""
 		status.text = "Running…"
 		status.add_theme_color_override("font_color", Ui.MUTED)
@@ -48,6 +52,7 @@ func _check_card(check: LabCheck) -> Control:
 		output.text += text + "\n"
 	)
 	check.finished.connect(func(ok: bool) -> void:
+		run_button.disabled = false
 		status.text = "PASS" if ok else "FAILED"
 		status.add_theme_color_override("font_color", Ui.TEAL if ok else Ui.RED)
 	)
