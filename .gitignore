@@ -23,6 +23,8 @@
 google-services.json
 *.keystore
 *.jks
+ANDROID_KEYSTORE_*.txt
+ANDROID_KEY_ALIAS.txt
 
 # Gradle and Python caches
 .gradle/

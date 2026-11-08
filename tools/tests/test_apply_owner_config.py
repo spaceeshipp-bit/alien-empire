@@ -49,10 +49,17 @@ def test_values_land_in_every_place(client, monkeypatch):
     assert json.loads((client / "google-services.json").read_text())["client"]
 
 
-@pytest.mark.parametrize("value", ["12-34", "abc123456", "123"])
+@pytest.mark.parametrize("value", ["12-34", "abc123456", "1234 5678"])
 def test_ids_must_be_digits(client, monkeypatch, value):
     monkeypatch.setenv("PLAY_GAMES_PROJECT_ID", value)
     with pytest.raises(SystemExit, match="only digits"):
+        aoc.main()
+
+
+@pytest.mark.parametrize("value", ["123", "1" * 21])
+def test_ids_must_have_a_plausible_length(client, monkeypatch, value):
+    monkeypatch.setenv("PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER", value)
+    with pytest.raises(SystemExit, match="6 to 20 digits"):
         aoc.main()
 
 

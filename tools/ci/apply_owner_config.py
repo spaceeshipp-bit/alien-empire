@@ -38,8 +38,10 @@ def digits(name: str) -> str | None:
     value = os.environ.get(name, "").strip()
     if not value:
         return None
-    if not re.fullmatch(r"\d{6,20}", value):
-        raise SystemExit(f"error: {name} must be only digits (got {len(value)} characters). See docs/PLUGINS.md.")
+    if not value.isdigit():
+        raise SystemExit(f"error: {name} must be only digits, with no spaces or dashes. See docs/PLUGINS.md.")
+    if not 6 <= len(value) <= 20:
+        raise SystemExit(f"error: {name} must be 6 to 20 digits (got {len(value)}). Copy the whole number. See docs/PLUGINS.md.")
     return value
 
 

@@ -50,7 +50,11 @@ download() {
   local url="$1" sha="$2" file="$cache/$2.zip"
   if [ ! -f "$file" ] || ! echo "$sha  $file" | sha256sum -c --status -; then
     mkdir -p "$cache"
-    curl -fsSL --retry 3 -o "$file.part" "$url"
+    if ! curl -fsSL --retry 3 -o "$file.part" "$url"; then
+      echo "error: download of $url failed" >&2
+      rm -f "$file.part"
+      return 1
+    fi
     if ! echo "$sha  $file.part" | sha256sum -c --status -; then
       echo "error: $url does not match its pinned SHA-256" >&2
       echo "  expected $sha" >&2

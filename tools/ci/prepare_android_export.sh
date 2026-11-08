@@ -9,8 +9,9 @@
 # APK can be built. Setup: docs/PLUGINS.md.
 #
 # Needs ANDROID_HOME and JAVA_HOME (set by GitHub's runner and setup-java).
-# VERSION_CODE (default GITHUB_RUN_NUMBER) sets the Android version code, which
-# must rise with every upload to Play.
+# VERSION_CODE sets the Android version code, which must rise with every upload
+# to Play. In CI it's the run number times 100 plus the attempt, so a re-run
+# ("Re-run all jobs") also gets a new, higher code.
 set -euo pipefail
 
 : "${ANDROID_HOME:?ANDROID_HOME must point at the Android SDK}"
@@ -18,7 +19,7 @@ set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 temp="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
-version_code="${VERSION_CODE:-${GITHUB_RUN_NUMBER:-1}}"
+version_code="${VERSION_CODE:-$(( ${GITHUB_RUN_NUMBER:-0} * 100 + ${GITHUB_RUN_ATTEMPT:-1} ))}"
 
 if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
   : "${ANDROID_KEYSTORE_PASSWORD:?the ANDROID_KEYSTORE_PASSWORD secret is missing}"
@@ -27,7 +28,10 @@ if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
   keystore="$temp/upload.keystore"
   key_user="$ANDROID_KEY_ALIAS"
   key_pass="$ANDROID_KEYSTORE_PASSWORD"
-  printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$keystore"
+  if ! printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d ' \r\n' | base64 -d > "$keystore" 2>/dev/null; then
+    echo "error: the ANDROID_KEYSTORE_BASE64 secret isn't valid base64. Paste the whole of ANDROID_KEYSTORE_BASE64.txt." >&2
+    exit 1
+  fi
 else
   signing="throwaway"
   keystore="$temp/debug.keystore"
@@ -41,7 +45,7 @@ else
 fi
 
 if ! cert="$(keytool -list -v -keystore "$keystore" -storepass "$key_pass" -alias "$key_user" 2>&1)"; then
-  echo "error: can't open the signing key. Check the ANDROID_KEY_ALIAS and ANDROID_KEYSTORE_PASSWORD secrets." >&2
+  echo "error: can't open the signing key. Check the ANDROID_KEYSTORE_BASE64 (the whole text), ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS secrets." >&2
   printf '%s\n' "$cert" | grep -i "keytool error" >&2 || true
   exit 1
 fi

@@ -11,7 +11,7 @@ set -euo pipefail
 
 apk="${1:?usage: $0 path/to/app.apk}"
 : "${ANDROID_HOME:?ANDROID_HOME must point at the Android SDK}"
-aapt2="$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)"
+aapt2="$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1 || true)"
 [ -x "$aapt2" ] || { echo "error: no aapt2 under $ANDROID_HOME/build-tools" >&2; exit 1; }
 
 manifest="$("$aapt2" dump xmltree --file AndroidManifest.xml "$apk")"

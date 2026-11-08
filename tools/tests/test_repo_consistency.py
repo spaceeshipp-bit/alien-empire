@@ -3,6 +3,8 @@ bundle, the GDScript file lists and the files on disk, the sim copies."""
 import re
 from pathlib import Path
 
+import pytest
+
 import config_tool as ct
 import sync_sim
 
@@ -37,8 +39,11 @@ def test_test_runner_lists_every_unit_test():
 
 
 def test_every_res_path_in_sim_exists():
+    # expected.json is deleted on purpose to re-record after a SIM_VERSION bump;
+    # the sim job then records fresh hashes and fails (docs/DECISIONS.md D-008).
+    optional = {"res://sim/tests/golden/expected.json"}
     for gd in (REPO / "sim").rglob("*.gd"):
-        for res in res_paths(gd):
+        for res in res_paths(gd) - optional:
             assert (REPO / res.removeprefix("res://")).exists(), f"{gd.relative_to(REPO)} refers to missing {res}"
 
 
@@ -49,6 +54,8 @@ def gd_int_constant(gd_file: Path, name: str) -> int:
 
 
 def test_golden_hashes_match_the_scenarios_bundle_and_sim_version():
+    if not (GOLDEN / "expected.json").exists():
+        pytest.skip("expected.json is being re-recorded; the sim job records it and fails")
     expected = ct.load_json(GOLDEN / "expected.json")
     bundle = ct.load_json(GOLDEN / "config_bundle.json")
     assert expected["sim_version"] == gd_int_constant(REPO / "sim" / "core" / "sim_version.gd", "SIM_VERSION")

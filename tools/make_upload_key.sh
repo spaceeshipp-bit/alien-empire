@@ -19,11 +19,16 @@ if ! command -v keytool >/dev/null 2>&1; then
   echo "error: keytool not found. Install a JDK (17 or newer) or use a GitHub Codespace." >&2
   exit 1
 fi
-if [ -e "$keystore" ]; then
-  echo "error: $keystore already exists. Move it away first; this script never overwrites a key." >&2
+if [ -e "$out" ] && [ -n "$(ls -A "$out" 2>/dev/null)" ]; then
+  echo "error: $out already exists and isn't empty. Pick a new folder; this script never overwrites a key." >&2
   exit 1
 fi
 mkdir -p "$out"
+if git -C "$out" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "error: $out is inside a git repository, where the key could get committed. Use a folder outside it (the default is ~/aetd-upload-key)." >&2
+  rmdir "$out" 2>/dev/null || true
+  exit 1
+fi
 chmod 700 "$out"
 
 # 32 random letters and digits. Godot needs the key and store passwords to be
@@ -34,15 +39,19 @@ while [ "${#password}" -lt 32 ]; do
 done
 password="${password:0:32}"
 
-keytool -genkeypair -noprompt -storetype PKCS12 -keystore "$keystore" \
+if ! keytool_out="$(keytool -genkeypair -noprompt -storetype PKCS12 -keystore "$keystore" \
   -storepass "$password" -keypass "$password" -alias "$alias_name" \
   -keyalg RSA -keysize 4096 -validity 10000 \
-  -dname "CN=Alien Empire TD upload key" >/dev/null 2>&1
+  -dname "CN=Alien Empire TD upload key" 2>&1)"; then
+  echo "error: keytool couldn't make the key:" >&2
+  printf '%s\n' "$keytool_out" >&2
+  exit 1
+fi
 
 base64 < "$keystore" | tr -d '\n' > "$out/ANDROID_KEYSTORE_BASE64.txt"
 printf '%s' "$password" > "$out/ANDROID_KEYSTORE_PASSWORD.txt"
 printf '%s' "$alias_name" > "$out/ANDROID_KEY_ALIAS.txt"
-chmod 600 "$out"/*
+chmod 600 "$keystore" "$out/ANDROID_KEYSTORE_BASE64.txt" "$out/ANDROID_KEYSTORE_PASSWORD.txt" "$out/ANDROID_KEY_ALIAS.txt"
 
 sha1="$(keytool -list -v -keystore "$keystore" -storepass "$password" -alias "$alias_name" 2>/dev/null \
   | sed -n 's/^[[:space:]]*SHA1: //p' | head -1)"

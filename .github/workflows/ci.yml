@@ -3,8 +3,8 @@ name: CI
 on:
   push:
   pull_request:
-  # "Run workflow" on the Actions tab: rebuild after changing a secret or
-  # variable, without a new commit.
+  # "Run workflow" on the Actions tab, once this file is on the default branch
+  # (main). Until then, rebuild with "Re-run all jobs" on the latest run.
   workflow_dispatch:
 
 env:
@@ -128,18 +128,18 @@ jobs:
           test -s build/android/aetd-m0-debug.apk
       - name: Check every plugin is in the APK
         run: tools/ci/check_apk_plugins.sh build/android/aetd-m0-debug.apk
+      # Uploaded unzipped, so a phone downloads the .apk itself; each artifact
+      # is named after its file. Before the AAB, so a failed AAB keeps the APK.
+      - uses: actions/upload-artifact@v7
+        with:
+          path: build/android/aetd-m0-debug.apk
+          archive: false
       - name: Export the release AAB for Play
         if: steps.prepare.outputs.signing == 'upload-key'
         run: |
           timeout 1200 godot --headless --path client \
             --export-release "Android AAB" "$GITHUB_WORKSPACE/build/android/aetd-m0-release.aab"
           test -s build/android/aetd-m0-release.aab
-      # Uploaded unzipped, so a phone downloads the .apk itself; each
-      # artifact is named after its file.
-      - uses: actions/upload-artifact@v7
-        with:
-          path: build/android/aetd-m0-debug.apk
-          archive: false
       - uses: actions/upload-artifact@v7
         if: steps.prepare.outputs.signing == 'upload-key'
         with:
