@@ -47,3 +47,21 @@ def test_every_res_path_in_sim_exists():
 def test_sync_then_check():
     assert sync_sim.main([]) == 0
     assert sync_sim.main(["--check"]) == 0
+
+
+def test_ci_scripts_exist_and_are_executable():
+    import os
+
+    import yaml
+
+    workflow = yaml.safe_load((REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    scripts = set()
+    for job in workflow["jobs"].values():
+        for step in job["steps"]:
+            scripts.update(re.findall(r"(tools/[\w/]+\.(?:sh|py))", step.get("run", "")))
+    assert scripts, "the workflow runs repo scripts"
+    for script in scripts:
+        path = REPO / script
+        assert path.exists(), script
+        if script.endswith(".sh"):
+            assert os.access(path, os.X_OK), f"{script} is not executable"

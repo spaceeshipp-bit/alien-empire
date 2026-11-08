@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  tools:
+    name: Config and tools
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r tools/requirements.txt
+      - name: Validate the balance config
+        run: python3 tools/config_tool.py validate
+      - name: Check the reference test vectors are current
+        run: python3 tools/gen_vectors.py --check
+      - name: Tool tests
+        run: python3 -m pytest -q tools/tests
+
+  sim:
+    name: Sim tests, headless and desktop
+    runs-on: ubuntu-24.04
+    needs: tools
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot
+        run: tools/ci/install_godot.sh
+      - name: Copy the sim core into the Godot projects
+        run: python3 tools/sync_sim.py
+      - name: Import the worker project
+        run: timeout 300 godot --headless --path worker --import
+      - name: Unit and golden tests on the headless worker
+        run: |
+          expected="$GITHUB_WORKSPACE/sim/tests/golden/expected.json"
+          if [ -f "$expected" ]; then
+            timeout 600 godot --headless --path worker --script res://cli/run_tests.gd
+          else
+            echo "::warning::No golden hashes are committed yet. Recording them on this runner: commit the golden-hashes artifact as sim/tests/golden/expected.json."
+            timeout 600 godot --headless --path worker --script res://cli/run_tests.gd -- --record "$expected"
+            python3 tools/sync_sim.py
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: golden-hashes
+          path: sim/tests/golden/expected.json
+      - name: Import the client project
+        run: timeout 300 godot --headless --path client --import
+      - name: Unit and golden tests on the desktop client
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q xvfb libgl1-mesa-dri
+          timeout 600 xvfb-run -a godot --path client --rendering-driver opengl3 -- --run-tests-and-quit
+
+  android:
+    name: Android test build
+    runs-on: ubuntu-24.04
+    needs: sim
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: golden-hashes
+          path: sim/tests/golden
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+      - name: Install Godot and export templates
+        run: tools/ci/install_godot.sh --templates
+      - name: Build our Android plugins
+        run: tools/build_android_plugins.sh
+      - name: Prepare the export
+        run: tools/ci/prepare_android_export.sh
+      - name: Export the debug APK
+        run: |
+          python3 tools/sync_sim.py
+          timeout 300 godot --headless --path client --import
+          mkdir -p build/android
+          timeout 1200 godot --headless --path client --install-android-build-template \
+            --export-debug "Android" "$GITHUB_WORKSPACE/build/android/aetd-m0-debug.apk"
+          test -s build/android/aetd-m0-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aetd-m0-debug-apk
+          path: build/android/aetd-m0-debug.apk
