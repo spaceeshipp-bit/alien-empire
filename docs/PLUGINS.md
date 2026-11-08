@@ -57,7 +57,7 @@ Do the steps in order. Steps 1 and 2 need no Google accounts beyond the phone's.
 1. On the phone, sign in to github.com in the browser (artifacts need a signed-in account).
 2. Open the repo's **Actions** tab, then the newest green **CI** run on `m0-foundations`.
 3. Scroll to **Artifacts** and tap **aetd-m0-debug.apk**. It downloads as an APK.
-4. Open the download. Android asks to allow installs from your browser: tap **Settings**, turn on **Allow from this source**, go back and tap **Install**. Play Protect may offer to scan an app it hasn't seen before; that's expected, let it scan.
+4. Open the download and follow the prompts. The first time, Android asks to allow installs from your browser: on that message tap **Settings** and turn on **Allow from this source**, then continue the install. Play Protect may offer to scan an app it hasn't seen before; that's expected, let it scan.
 5. If Android says the app isn't installed because it conflicts with an existing package, uninstall **AETD Plugin Lab** first. Builds signed with different keys can't update each other; this happens once, when you move to your upload key in step 2.
 6. Open **AETD Plugin Lab** and tap **Sim tests**. Every line should be green and the top line should read **ALL CHECKS PASS**. Take a screenshot. This is the "same hash on Android" check of M0.
 7. Back on the home screen, open **Plugin Lab** and run **AdMob rewarded ad**. A Google test ad plays; watch it to the end. The check passes when the SDK grants the reward.
@@ -81,7 +81,7 @@ Play only accepts uploads signed with your own key, and the same key keeps every
 
 Billing, Play Games and the Integrity test tools all hang off a Play Console app. The Plugin Lab gets its own app, `com.alienempiretd.pluginlab`, so the real game's package name stays free (D-010).
 
-1. Finish the Play Console account checks early: identity verification, and device verification in the **Play Console** mobile app (it needs an Android 10 or newer phone). Google doesn't say whether internal testing waits for them.
+1. Finish the Play Console account checks early: [identity verification](https://support.google.com/googleplay/android-developer/answer/10841920), and [device verification](https://support.google.com/googleplay/android-developer/answer/14316361) in the **Play Console** mobile app (it needs an Android 10 or newer phone). Google doesn't say whether internal testing waits for them.
 2. **Create app**: app name "AETD Plugin Lab", package name `com.alienempiretd.pluginlab`, your default language, **Game** (Play Games Services needs a game), **Free**, and a contact email. Accept the declarations, including the Play App Signing terms, and tap **Create app**.
 3. Download **aetd-m0-release.aab** from the latest CI run on a computer.
 4. **Test and release > Testing > Internal testing > Create new release**. If it asks about the app signing key, keep the Google-generated one: Google signs what it delivers, and you keep only the upload key. Upload the AAB, add a release name, **Save**, **Review release**, **Start rollout to Internal testing**. Play may list setup tasks it wants first; internal testing doesn't need the closed-test requirement that production has.
@@ -91,9 +91,10 @@ Each new upload needs a higher version code. CI uses its run number, so a newer 
 
 ### 4. Billing
 
-1. **Monetize with Play > Products > In-app products > Create product**. Product ID `m0_test_gems`, any name, description and price. **Save**, then **Activate**.
-2. Your Play Console account is a license tester automatically. Make sure it's the phone's main Google account, and that the Play Store app is up to date.
-3. On the phone, run **Play Billing** in the Lab. A new product can take a while to show up; if Play doesn't return it yet, try again later.
+1. Play Console asks for a payments profile (a merchant account) before you can create products. Set it up when it asks; no sale ever happens in M0.
+2. **Monetize with Play > Products > One-time products > Create one-time product**. Product ID `m0_test_gems`, any name and description. Add a purchase option with any ID and price, then **Activate**. Play only returns products whose purchase option is active.
+3. Your Play Console account is a license tester automatically. Make sure it's the phone's main Google account, and that the Play Store app is up to date.
+4. On the phone, run **Play Billing** in the Lab. A new product can take a while to show up; if Play doesn't return it yet, try again later.
 
 License testers can test billing on the sideloaded debug APK; it doesn't have to come from Play, as long as the package name matches.
 
@@ -110,7 +111,7 @@ License testers can test billing on the sideloaded debug APK; it doesn't have to
 2. Play Console: **Grow users > Play Games Services > Setup and management > Configuration**. Create a Play Games Services project for this app (only the display name is needed for testing). Note the **Project ID** shown under the game's name (digits).
 3. Set up the OAuth consent screen when Play Console asks: add the scopes `games`, `games_lite` and `drive.appdata`, and publish it or make it available to test users.
 4. **Credentials > Add credential > Android**: package name `com.alienempiretd.pluginlab`, and the **SHA-1** from the build's run summary (the upload key's SHA-1; `tools/make_upload_key.sh` printed it too). If you also install builds from Play, add a second Android credential with the app signing key's SHA-1 from Play Console's app signing page.
-5. **Setup and management > Testers**: add your own Google account. Google says the SDK won't work for your account otherwise; it can take a couple of hours to take effect.
+5. **Setup and management > Testers**: make sure your own Google account is listed (internal-testing testers are shared with Play Games automatically, but check). Google says the SDK won't work for your account otherwise; it can take a couple of hours to take effect.
 6. GitHub: add the variable `PLAY_GAMES_PROJECT_ID` with the Project ID.
 7. Start a new build, install it, and run **Google sign-in (Play Games)**.
 
@@ -120,7 +121,7 @@ License testers can test billing on the sideloaded debug APK; it doesn't have to
 2. Add an Android app with package name `com.alienempiretd.pluginlab`. Download `google-services.json`.
 3. GitHub: add the secret `GOOGLE_SERVICES_JSON` with the file's whole text. CI checks it's valid JSON for our package name and stops with a clear message if not.
 4. Start a new build, install it, and run **Push notifications (FCM)**. Allow notifications when Android asks. The check passes when it shows the phone's FCM token. Tap **Copy this check's output** and send the token to yourself.
-5. Put the app in the background. In the Firebase console: **DevOps & Engagement > Messaging > Create your first campaign > Firebase Notification messages > Create**. Enter a title and text, choose **Send test message**, paste the token into **Add an FCM registration token**, and tap **Test**. The notification should appear on the phone. With the app open instead, the message shows up in the check's output. The notification icon is a plain square for now; a real icon comes with the game's art.
+5. Put the app in the background. In the Firebase console: **DevOps & Engagement > Messaging > Create your first campaign > Firebase Notification messages > Create** (once a campaign exists: **Campaigns > New campaign > Notifications**). Enter a title and text, choose **Send test message**, paste the token into **Add an FCM registration token**, and tap **Test**. The notification should appear on the phone; its icon is a plain square for now. If the push check is still on screen when a message arrives with the app open, the message shows in its output.
 
 ### 8. Report back
 
@@ -131,7 +132,7 @@ Send screenshots of the **Sim tests** screen and of each Plugin Lab check after 
 | Message | Likely cause and fix |
 | --- | --- |
 | "Plugin not installed" or "isn't in this build" | The APK was built without the plugin. Check the CI log's **Check every plugin is in the APK** step. |
-| Billing: "didn't return m0_test_gems" | The product isn't **Active** yet, or hasn't propagated, or the phone's main account isn't a license tester. |
+| Billing: "didn't return m0_test_gems" | The product's purchase option isn't **Active** yet, or hasn't propagated, or the phone's main account isn't a license tester. |
 | Billing: `BILLING_UNAVAILABLE` or `DEVELOPER_ERROR` | Read Play's message after the code first. Usually there's no internal-testing release with the billing library yet, or the Play Store app is out of date. |
 | Sign-in: "didn't finish within 3 minutes" | The Google account picker stayed open; run the check again and pick your account. |
 | AdMob: "failed to load" | Network or ad availability. Google's demo units usually fill; run it again. |
@@ -145,7 +146,7 @@ Send screenshots of the **Sim tests** screen and of each Plugin Lab check after 
 ## Sources
 
 - Plugins: the release pages and source at each pinned tag, linked in the table above; Godot's [Android plugin](https://docs.godotengine.org/en/4.7/tutorials/platform/android/android_plugin.html) and [in-app purchases](https://docs.godotengine.org/en/4.7/tutorials/platform/android/android_in_app_purchases.html) docs.
-- Billing testing: [Test your Play Billing integration](https://developer.android.com/google/play/billing/test), [Getting ready](https://developer.android.com/google/play/billing/getting-ready), [Create an in-app product](https://support.google.com/googleplay/android-developer/answer/1153481), [License testing](https://support.google.com/googleplay/android-developer/answer/6062777), [Billing Library deprecation FAQ](https://developer.android.com/google/play/billing/deprecation-faq).
+- Billing testing: [Test your Play Billing integration](https://developer.android.com/google/play/billing/test), [Getting ready](https://developer.android.com/google/play/billing/getting-ready), [One-time products](https://support.google.com/googleplay/android-developer/answer/16430488), [License testing](https://support.google.com/googleplay/android-developer/answer/6062777), [Billing Library deprecation FAQ](https://developer.android.com/google/play/billing/deprecation-faq).
 - Play Console: [Create and set up your app](https://support.google.com/googleplay/android-developer/answer/9859152), [App bundles for new apps](https://support.google.com/googleplay/android-developer/answer/9859348), [Internal testing](https://support.google.com/googleplay/android-developer/answer/9845334), [Play App Signing and upload key reset](https://support.google.com/googleplay/android-developer/answer/9842756), [Testing requirements for new personal accounts](https://support.google.com/googleplay/android-developer/answer/14151465), [Device verification](https://support.google.com/googleplay/android-developer/answer/14316361), [Target API requirement](https://support.google.com/googleplay/android-developer/answer/11926878).
 - Play Games Services: [Console setup](https://developer.android.com/games/pgs/console/setup), [Sign-in](https://developer.android.com/games/pgs/android/android-signin).
 - Play Integrity: [Setup](https://developer.android.com/google/play/integrity/setup), [Verdicts](https://developer.android.com/google/play/integrity/verdicts), [Testing tools](https://developer.android.com/google/play/integrity/additional-tools).

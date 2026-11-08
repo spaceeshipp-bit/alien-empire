@@ -9,6 +9,9 @@ const MESSAGING := "GodotxFirebaseMessaging"
 
 var _core: Object = null
 var _messaging: Object = null
+## Firebase can hand over a token before Android answers the permission
+## request, so the check only passes once permission is granted.
+var _permission_ok: bool = false
 
 
 func title() -> String:
@@ -29,6 +32,7 @@ func run() -> void:
 		return
 	if _core == null and not _connect_plugin():
 		return
+	_permission_ok = false
 	arm_timeout(60.0, "No FCM token within 60 seconds.")
 	log_line("Starting Firebase…")
 	_core.call("initialize")
@@ -58,7 +62,7 @@ func _connect_plugin() -> bool:
 
 func _on_core_initialized(success: bool) -> void:
 	if not success:
-		finish(false, "Firebase didn't start. Check google-services.json matches this package name.")
+		finish(false, "Firebase failed to start (see the Core error above).")
 		return
 	# Success here doesn't prove Firebase is configured: Messaging reports
 	# firebase_not_initialized next if google-services.json was missing.
@@ -68,6 +72,7 @@ func _on_core_initialized(success: bool) -> void:
 
 
 func _on_permission_granted() -> void:
+	_permission_ok = true
 	log_line("Permission granted. Fetching this phone's FCM token…")
 	_messaging.call("get_token")
 
@@ -79,8 +84,11 @@ func _on_permission_denied() -> void:
 func _on_token(token: String) -> void:
 	if _done:
 		return
+	if not _permission_ok:
+		log_line("Got a token; waiting for the notification permission answer…")
+		return
 	log_line("FCM token (copy it with the button below):\n%s" % token)
-	finish(true, "Push is set up. Send a test message to this token from the Firebase console. With the app open it appears here; in the background it shows as a notification.")
+	finish(true, "Push is set up. Send a test message to this token from the Firebase console. With this screen open it appears here; with the app in the background it shows as a notification.")
 
 
 func _on_error(message: String) -> void:
@@ -91,4 +99,8 @@ func _on_error(message: String) -> void:
 
 
 func _on_message(message_title: String, body: String) -> void:
+	if message_title.is_empty() and body.is_empty():
+		# Android doesn't pass on a tapped notification's title and text.
+		log_line("Message received (opened from its notification).")
+		return
 	log_line("Message received: %s: %s" % [message_title, body])
