@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.alien-empire-td.invalid/manifest.schema.json",
+  "title": "Config manifest",
+  "description": "Identifies one published version of the balance config. Every battle record stores the config version it ran on.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["config_version", "schema_version", "label"],
+  "properties": {
+    "config_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Raise by 1 every time a changed config is published. A battle always runs on the version it started with."
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Version of these schema files. Raise it when a field is added, renamed or removed, so old clients can refuse a config they can't read."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "Short human note on what this version changed."
+    }
+  }
+}

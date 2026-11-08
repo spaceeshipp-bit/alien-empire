@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.alien-empire-td.invalid/counters.schema.json",
+  "title": "Counter chart",
+  "description": "How well each attacking tower does against each enemy class (step 3 of the damage pipeline). One row per tower that deals damage; support towers have no row. The rating names map to multipliers in damage.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["counters"],
+  "properties": {
+    "counters": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "common.schema.json#/$defs/id" },
+      "additionalProperties": { "$ref": "#/$defs/row" }
+    }
+  },
+  "$defs": {
+    "rating": {
+      "enum": ["strong", "neutral", "weak", "cant_hit"],
+      "description": "Counter rating. cant_hit means the tower can't target this class at all."
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rating"],
+      "properties": {
+        "rating": { "$ref": "#/$defs/rating" }
+      }
+    },
+    "cloaked_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rating", "unrevealed_damage_bp"],
+      "properties": {
+        "rating": { "$ref": "#/$defs/rating" },
+        "unrevealed_damage_bp": {
+          "$ref": "common.schema.json#/$defs/share_bp",
+          "description": "Damage share against a cloaked target that no Sensor Beacon has revealed. 0 means the tower can't target it until it's revealed."
+        }
+      }
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["swarm", "armored", "shielded", "air", "cloaked", "titan"],
+      "properties": {
+        "swarm": { "$ref": "#/$defs/entry" },
+        "armored": { "$ref": "#/$defs/entry" },
+        "shielded": { "$ref": "#/$defs/entry" },
+        "air": { "$ref": "#/$defs/entry" },
+        "cloaked": { "$ref": "#/$defs/cloaked_entry" },
+        "titan": { "$ref": "#/$defs/entry" }
+      }
+    }
+  }
+}

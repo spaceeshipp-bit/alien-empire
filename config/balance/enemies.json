@@ -1,0 +1,72 @@
+{
+  "enemies": [
+    {
+      "id": "swarmer",
+      "class": "swarm",
+      "hp_x100": 4000,
+      "armor": 0,
+      "shield_x100": 0,
+      "speed_mtps": 2000,
+      "movement": "ground",
+      "leak_lives": 1,
+      "abilities": []
+    },
+    {
+      "id": "carapace_brute",
+      "class": "armored",
+      "hp_x100": 36000,
+      "armor": 150,
+      "shield_x100": 0,
+      "speed_mtps": 700,
+      "movement": "ground",
+      "leak_lives": 3,
+      "abilities": []
+    },
+    {
+      "id": "shield_drone",
+      "class": "shielded",
+      "hp_x100": 8000,
+      "armor": 20,
+      "shield_x100": 24000,
+      "speed_mtps": 1200,
+      "movement": "ground",
+      "leak_lives": 1,
+      "abilities": []
+    },
+    {
+      "id": "skimmer",
+      "class": "air",
+      "hp_x100": 8000,
+      "armor": 10,
+      "shield_x100": 0,
+      "speed_mtps": 1600,
+      "movement": "air",
+      "leak_lives": 1,
+      "abilities": []
+    },
+    {
+      "id": "phaser",
+      "class": "cloaked",
+      "hp_x100": 14000,
+      "armor": 30,
+      "shield_x100": 0,
+      "speed_mtps": 1400,
+      "movement": "ground",
+      "leak_lives": 1,
+      "abilities": []
+    },
+    {
+      "id": "hive_carrier",
+      "class": "titan",
+      "hp_x100": 250000,
+      "armor": 100,
+      "shield_x100": 40000,
+      "speed_mtps": 500,
+      "movement": "ground",
+      "leak_lives": 1,
+      "abilities": [
+        { "type": "spawn_on_death", "enemy": "swarmer", "count": 6 }
+      ]
+    }
+  ]
+}

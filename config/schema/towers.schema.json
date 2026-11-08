@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.alien-empire-td.invalid/towers.schema.json",
+  "title": "Towers",
+  "description": "Tower types at tier 1, level 1, plus the rules for upgrading field towers during a PvE battle. Units follow common.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["towers", "field_upgrades"],
+  "properties": {
+    "towers": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/tower" }
+    },
+    "field_upgrades": { "$ref": "#/$defs/field_upgrades" }
+  },
+  "$defs": {
+    "tower": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "role",
+        "cost_credits",
+        "damage_x100",
+        "shots_per_s_x100",
+        "range_mt",
+        "splash_mt",
+        "damage_type",
+        "armor_pierce_bp",
+        "abilities"
+      ],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One-line role for designers. Player-facing text lives in string tables."
+        },
+        "cost_credits": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Battle credits to build it as a field tower in PvE."
+        },
+        "damage_x100": {
+          "$ref": "common.schema.json#/$defs/x100",
+          "description": "Damage per hit, times 100. 0 for support towers that don't attack."
+        },
+        "shots_per_s_x100": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Shots per second times 100: 2.5 shots per second is 250. 0 for support towers."
+        },
+        "range_mt": {
+          "$ref": "common.schema.json#/$defs/mt",
+          "description": "Targeting range in thousandths of a tile."
+        },
+        "splash_mt": {
+          "$ref": "common.schema.json#/$defs/mt",
+          "description": "Splash radius in thousandths of a tile. 0 means single target."
+        },
+        "damage_type": {
+          "enum": ["standard", "emp", "thermal", "none"],
+          "description": "Picks the shield multiplier in damage.json (step 5 of the damage pipeline). none is for support towers."
+        },
+        "armor_pierce_bp": {
+          "$ref": "common.schema.json#/$defs/share_bp",
+          "description": "Share of the target's armor this tower ignores (step 6). The Railgun ignores 75%: 7500."
+        },
+        "abilities": {
+          "type": "array",
+          "description": "Extra effects beyond damage.",
+          "items": { "$ref": "#/$defs/ability" }
+        }
+      }
+    },
+    "ability": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "slow_bp"],
+          "properties": {
+            "type": { "const": "slow" },
+            "slow_bp": {
+              "$ref": "common.schema.json#/$defs/share_bp",
+              "description": "Speed reduction on hit. Slows from all sources stack up to status_effects.slow.max_total_bp."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "const": "reveal",
+              "description": "Makes cloaked enemies in range targetable. They stay revealed for status_effects.reveal.linger_ms after leaving range."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "const": "mark",
+              "description": "Marks enemies in range so they take extra damage (status_effects.mark)."
+            }
+          }
+        }
+      ]
+    },
+    "field_upgrades": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Upgrading a field tower inside a PvE battle. Level 1 is the built tower.",
+      "required": [
+        "max_level",
+        "first_upgrade_cost_bp",
+        "cost_growth_bp",
+        "damage_growth_bp",
+        "range_step_bp",
+        "sell_refund_bp"
+      ],
+      "properties": {
+        "max_level": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Highest level a field tower can reach."
+        },
+        "first_upgrade_cost_bp": {
+          "$ref": "common.schema.json#/$defs/bp",
+          "description": "Cost of the level 2 upgrade as a share of the tower's build cost."
+        },
+        "cost_growth_bp": {
+          "$ref": "common.schema.json#/$defs/bp",
+          "description": "Each later upgrade costs the previous upgrade times this."
+        },
+        "damage_growth_bp": {
+          "$ref": "common.schema.json#/$defs/bp",
+          "description": "Damage multiplier per level gained (compounding)."
+        },
+        "range_step_bp": {
+          "$ref": "common.schema.json#/$defs/bp",
+          "description": "Range added per level gained, as a share of base range (not compounding)."
+        },
+        "sell_refund_bp": {
+          "$ref": "common.schema.json#/$defs/share_bp",
+          "description": "Share of all credits spent on the tower (build plus upgrades) returned when it's sold."
+        }
+      }
+    }
+  }
+}

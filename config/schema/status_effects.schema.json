@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.alien-empire-td.invalid/status_effects.schema.json",
+  "title": "Status effects",
+  "description": "Global rules for slows, reveals, marks, stuns and shield regeneration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["slow", "reveal", "mark", "stun", "shield_regen"],
+  "properties": {
+    "slow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_total_bp"],
+      "properties": {
+        "max_total_bp": {
+          "$ref": "common.schema.json#/$defs/share_bp",
+          "description": "Slows from all sources add up to at most this speed reduction."
+        }
+      }
+    },
+    "reveal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["linger_ms"],
+      "properties": {
+        "linger_ms": {
+          "$ref": "common.schema.json#/$defs/ms",
+          "description": "A cloaked target stays targetable this long after leaving a Sensor Beacon's range."
+        }
+      }
+    },
+    "mark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["damage_taken_bp", "stacks"],
+      "properties": {
+        "damage_taken_bp": {
+          "$ref": "common.schema.json#/$defs/bp",
+          "description": "Extra damage a marked target takes."
+        },
+        "stacks": {
+          "type": "boolean",
+          "description": "Whether marks from several sources add up."
+        }
+      }
+    },
+    "stun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["immune_classes", "raid_commanders_immune"],
+      "properties": {
+        "immune_classes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/enemy_class" },
+          "description": "Classes that can't be stunned."
+        },
+        "raid_commanders_immune": {
+          "type": "boolean",
+          "description": "Whether raid commanders can be stunned."
+        }
+      }
+    },
+    "shield_regen": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["per_second_x100", "delay_ms"],
+      "properties": {
+        "per_second_x100": {
+          "$ref": "common.schema.json#/$defs/x100",
+          "description": "Shield points regained per second, times 100."
+        },
+        "delay_ms": {
+          "$ref": "common.schema.json#/$defs/ms",
+          "description": "Regeneration starts after this long without taking damage."
+        }
+      }
+    }
+  }
+}

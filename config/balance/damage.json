@@ -1,0 +1,21 @@
+{
+  "counter_ratings_bp": {
+    "strong": 15000,
+    "neutral": 10000,
+    "weak": 5000,
+    "cant_hit": 0
+  },
+  "shield_multipliers_bp": {
+    "standard": 10000,
+    "emp": 30000,
+    "thermal": 5000
+  },
+  "armor_constant": 100,
+  "max_reduction_bp": 6000,
+  "min_damage_x100": 100,
+  "bonus_pool": {
+    "full_value_until_bp": 3000,
+    "partial_value_until_bp": 9000,
+    "partial_rate_bp": 5000
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "towers": [
+    {
+      "id": "pulse_turret",
+      "role": "Generalist, hits ground and air",
+      "cost_credits": 100,
+      "damage_x100": 1000,
+      "shots_per_s_x100": 200,
+      "range_mt": 3000,
+      "splash_mt": 0,
+      "damage_type": "standard",
+      "armor_pierce_bp": 0,
+      "abilities": []
+    },
+    {
+      "id": "plasma_torch",
+      "role": "Short-range splash, thermal",
+      "cost_credits": 150,
+      "damage_x100": 500,
+      "shots_per_s_x100": 250,
+      "range_mt": 1800,
+      "splash_mt": 1000,
+      "damage_type": "thermal",
+      "armor_pierce_bp": 0,
+      "abilities": []
+    },
+    {
+      "id": "railgun",
+      "role": "Long range, pierces armor",
+      "cost_credits": 200,
+      "damage_x100": 5000,
+      "shots_per_s_x100": 50,
+      "range_mt": 5000,
+      "splash_mt": 0,
+      "damage_type": "standard",
+      "armor_pierce_bp": 7500,
+      "abilities": []
+    },
+    {
+      "id": "ion_disruptor",
+      "role": "EMP, strong against shields, slows",
+      "cost_credits": 150,
+      "damage_x100": 1000,
+      "shots_per_s_x100": 160,
+      "range_mt": 3000,
+      "splash_mt": 0,
+      "damage_type": "emp",
+      "armor_pierce_bp": 0,
+      "abilities": [
+        { "type": "slow", "slow_bp": 2000 }
+      ]
+    },
+    {
+      "id": "flak_battery",
+      "role": "Anti-air splash",
+      "cost_credits": 150,
+      "damage_x100": 1200,
+      "shots_per_s_x100": 120,
+      "range_mt": 3500,
+      "splash_mt": 800,
+      "damage_type": "standard",
+      "armor_pierce_bp": 0,
+      "abilities": []
+    },
+    {
+      "id": "sensor_beacon",
+      "role": "Reveals cloaked aliens and marks targets",
+      "cost_credits": 125,
+      "damage_x100": 0,
+      "shots_per_s_x100": 0,
+      "range_mt": 3000,
+      "splash_mt": 0,
+      "damage_type": "none",
+      "armor_pierce_bp": 0,
+      "abilities": [
+        { "type": "reveal" },
+        { "type": "mark" }
+      ]
+    }
+  ],
+  "field_upgrades": {
+    "max_level": 4,
+    "first_upgrade_cost_bp": 8000,
+    "cost_growth_bp": 15000,
+    "damage_growth_bp": 14500,
+    "range_step_bp": 500,
+    "sell_refund_bp": 7000
+  }
+}

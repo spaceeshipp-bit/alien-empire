@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.alien-empire-td.invalid/common.schema.json",
+  "title": "Shared definitions",
+  "description": "Units used across every config file. All numbers are integers so the sim never touches floating point: _x100 means the value times 100, _mt means thousandths of a tile, _mtps means thousandths of a tile per second, _bp means basis points (10000 = 100%), _ms means milliseconds and must be a whole number of 50 ms sim ticks.",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,39}$",
+      "description": "Stable content id: lower case letters, digits and underscores, starting with a letter, at most 40 characters. Player-facing names live in string tables keyed by this id."
+    },
+    "enemy_class": {
+      "enum": ["swarm", "armored", "shielded", "air", "cloaked", "titan"],
+      "description": "The six classes shared by aliens (PvE) and raid units (PvP). One counter chart covers both modes."
+    },
+    "bp": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Basis points: 10000 = 100%."
+    },
+    "share_bp": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000,
+      "description": "A share between 0% and 100%, in basis points."
+    },
+    "x100": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "A value times 100, such as HP or damage: 40 HP is 4000."
+    },
+    "mt": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "A distance in thousandths of a tile: 1.8 tiles is 1800."
+    },
+    "ms": {
+      "type": "integer",
+      "minimum": 0,
+      "multipleOf": 50,
+      "description": "A duration in milliseconds, a whole number of 50 ms sim ticks (20 ticks per second)."
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "counters": {
+    "pulse_turret": {
+      "swarm": { "rating": "neutral" },
+      "armored": { "rating": "weak" },
+      "shielded": { "rating": "neutral" },
+      "air": { "rating": "neutral" },
+      "cloaked": { "rating": "neutral", "unrevealed_damage_bp": 0 },
+      "titan": { "rating": "neutral" }
+    },
+    "plasma_torch": {
+      "swarm": { "rating": "strong" },
+      "armored": { "rating": "weak" },
+      "shielded": { "rating": "neutral" },
+      "air": { "rating": "cant_hit" },
+      "cloaked": { "rating": "neutral", "unrevealed_damage_bp": 5000 },
+      "titan": { "rating": "neutral" }
+    },
+    "railgun": {
+      "swarm": { "rating": "weak" },
+      "armored": { "rating": "strong" },
+      "shielded": { "rating": "neutral" },
+      "air": { "rating": "cant_hit" },
+      "cloaked": { "rating": "neutral", "unrevealed_damage_bp": 0 },
+      "titan": { "rating": "strong" }
+    },
+    "ion_disruptor": {
+      "swarm": { "rating": "weak" },
+      "armored": { "rating": "weak" },
+      "shielded": { "rating": "strong" },
+      "air": { "rating": "neutral" },
+      "cloaked": { "rating": "neutral", "unrevealed_damage_bp": 0 },
+      "titan": { "rating": "neutral" }
+    },
+    "flak_battery": {
+      "swarm": { "rating": "cant_hit" },
+      "armored": { "rating": "cant_hit" },
+      "shielded": { "rating": "cant_hit" },
+      "air": { "rating": "strong" },
+      "cloaked": { "rating": "cant_hit", "unrevealed_damage_bp": 0 },
+      "titan": { "rating": "cant_hit" }
+    }
+  }
+}

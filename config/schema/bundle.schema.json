@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.alien-empire-td.invalid/bundle.schema.json",
+  "title": "Config bundle",
+  "description": "All balance files merged into one document, as the server serves it at login and as the sim loads it. tools/config_tool.py bundle writes it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "config_hash", "data"],
+  "properties": {
+    "format": {
+      "const": 1,
+      "description": "Layout version of this bundle wrapper."
+    },
+    "config_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of data serialized as canonical JSON (keys sorted, no spaces, UTF-8). Battle records store it beside the config version."
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest", "towers", "enemies", "counters", "damage", "status_effects"],
+      "properties": {
+        "manifest": { "$ref": "manifest.schema.json" },
+        "towers": { "$ref": "towers.schema.json" },
+        "enemies": { "$ref": "enemies.schema.json" },
+        "counters": { "$ref": "counters.schema.json" },
+        "damage": { "$ref": "damage.schema.json" },
+        "status_effects": { "$ref": "status_effects.schema.json" }
+      }
+    }
+  }
+}

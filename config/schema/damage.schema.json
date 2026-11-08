@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.alien-empire-td.invalid/damage.schema.json",
+  "title": "Damage pipeline",
+  "description": "Constants for the fixed damage order: base damage, soft-capped bonus pool, counter, raid modifiers (raid config, later), shields, armor, floors.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "counter_ratings_bp",
+    "shield_multipliers_bp",
+    "armor_constant",
+    "max_reduction_bp",
+    "min_damage_x100",
+    "bonus_pool"
+  ],
+  "properties": {
+    "counter_ratings_bp": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Step 3: damage multiplier for each counter rating.",
+      "required": ["strong", "neutral", "weak", "cant_hit"],
+      "properties": {
+        "strong": { "$ref": "common.schema.json#/$defs/bp" },
+        "neutral": { "$ref": "common.schema.json#/$defs/bp" },
+        "weak": { "$ref": "common.schema.json#/$defs/bp" },
+        "cant_hit": { "$ref": "common.schema.json#/$defs/bp" }
+      }
+    },
+    "shield_multipliers_bp": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Step 5: multiplier on damage dealt to shields, by the tower's damage type.",
+      "required": ["standard", "emp", "thermal"],
+      "properties": {
+        "standard": { "$ref": "common.schema.json#/$defs/bp" },
+        "emp": { "$ref": "common.schema.json#/$defs/bp" },
+        "thermal": { "$ref": "common.schema.json#/$defs/bp" }
+      }
+    },
+    "armor_constant": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Step 6: armor reduction = armor / (armor + armor_constant)."
+    },
+    "max_reduction_bp": {
+      "$ref": "common.schema.json#/$defs/share_bp",
+      "description": "Step 7: total reduction from armor and resist effects never exceeds this."
+    },
+    "min_damage_x100": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Step 7: every hit deals at least this much, times 100."
+    },
+    "bonus_pool": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Step 2: soft cap on stacked bonuses (research, commanders, buildings, clan tech, relics). Bonuses count fully up to full_value_until_bp, at partial_rate_bp from there up to partial_value_until_bp, and not at all beyond.",
+      "required": ["full_value_until_bp", "partial_value_until_bp", "partial_rate_bp"],
+      "properties": {
+        "full_value_until_bp": { "$ref": "common.schema.json#/$defs/bp" },
+        "partial_value_until_bp": { "$ref": "common.schema.json#/$defs/bp" },
+        "partial_rate_bp": { "$ref": "common.schema.json#/$defs/share_bp" }
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+# Python tools: config validation, reference test vectors, tests.
+jsonschema==4.26.0
+pytest==9.1.1
+PyYAML==6.0.3

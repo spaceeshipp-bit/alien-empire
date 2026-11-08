@@ -1,0 +1,20 @@
+{
+  "slow": {
+    "max_total_bp": 4000
+  },
+  "reveal": {
+    "linger_ms": 3000
+  },
+  "mark": {
+    "damage_taken_bp": 1000,
+    "stacks": false
+  },
+  "stun": {
+    "immune_classes": ["titan"],
+    "raid_commanders_immune": true
+  },
+  "shield_regen": {
+    "per_second_x100": 1500,
+    "delay_ms": 3000
+  }
+}

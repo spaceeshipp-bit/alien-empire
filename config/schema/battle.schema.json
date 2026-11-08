@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.alien-empire-td.invalid/battle.schema.json",
+  "title": "Battle spec",
+  "description": "Everything a battle needs besides the config: the seed, a snapshot of the map, the waves and the player's command log. Replaying the same spec on the same config and sim version gives the same result on any device.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["battle_id", "mode", "seed", "max_ms", "map", "waves", "commands"],
+  "properties": {
+    "battle_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "mode": {
+      "enum": ["pve"],
+      "description": "Battle type. Raids are added in M2."
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Issued by the server. Any whole number JSON carries exactly (below 2^53)."
+    },
+    "max_ms": {
+      "$ref": "common.schema.json#/$defs/ms",
+      "minimum": 50,
+      "description": "Hard stop. A PvE battle normally ends when every wave has spawned and no alien is left."
+    },
+    "map": { "$ref": "#/$defs/map" },
+    "waves": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/wave" }
+    },
+    "commands": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/command" },
+      "description": "Player inputs in tick order. M0 defines no command types yet, so the sim rejects any command; M1 adds field towers."
+    }
+  },
+  "$defs": {
+    "point": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "common.schema.json#/$defs/mt" },
+        { "$ref": "common.schema.json#/$defs/mt" }
+      ],
+      "items": false,
+      "minItems": 2,
+      "description": "[x, y] in thousandths of a tile. y grows toward the Core at the bottom of the portrait screen."
+    },
+    "path": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/point" }
+    },
+    "lane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ground"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "ground": {
+          "$ref": "#/$defs/path",
+          "description": "Waypoints from the map edge to the Core for ground aliens."
+        },
+        "air": {
+          "$ref": "#/$defs/path",
+          "description": "Waypoints for air aliens on this lane. Required if any air alien spawns here."
+        }
+      }
+    },
+    "map": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lanes"],
+      "properties": {
+        "lanes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/lane" }
+        }
+      }
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enemy", "lane", "count", "offset_ms", "interval_ms", "jitter_ms"],
+      "properties": {
+        "enemy": { "$ref": "common.schema.json#/$defs/id" },
+        "lane": { "$ref": "common.schema.json#/$defs/id" },
+        "count": { "type": "integer", "minimum": 1, "maximum": 500 },
+        "offset_ms": {
+          "$ref": "common.schema.json#/$defs/ms",
+          "description": "First spawn, counted from the wave's start."
+        },
+        "interval_ms": {
+          "$ref": "common.schema.json#/$defs/ms",
+          "description": "Time between spawns in the group."
+        },
+        "jitter_ms": {
+          "$ref": "common.schema.json#/$defs/ms",
+          "description": "Each spawn is delayed by a seeded random 0 to jitter_ms, so waves don't look mechanical. 0 turns it off."
+        }
+      }
+    },
+    "wave": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_ms", "groups"],
+      "properties": {
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/ms",
+          "description": "Wave start, counted from the battle's start."
+        },
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/group" }
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tick", "type", "args"],
+      "properties": {
+        "tick": { "type": "integer", "minimum": 0 },
+        "type": { "$ref": "common.schema.json#/$defs/id" },
+        "args": { "type": "object" }
+      }
+    }
+  }
+}
