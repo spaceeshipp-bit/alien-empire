@@ -37,11 +37,29 @@ def test_test_runner_lists_every_unit_test():
 
 
 def test_every_res_path_in_sim_exists():
-    # expected.json appears once the goldens are first recorded with Godot.
-    optional = {"res://sim/tests/golden/expected.json"}
     for gd in (REPO / "sim").rglob("*.gd"):
-        for res in res_paths(gd) - optional:
+        for res in res_paths(gd):
             assert (REPO / res.removeprefix("res://")).exists(), f"{gd.relative_to(REPO)} refers to missing {res}"
+
+
+def gd_int_constant(gd_file: Path, name: str) -> int:
+    match = re.search(rf"const {name}\s*(?::\s*int)?\s*:?=\s*(\d+)", gd_file.read_text(encoding="utf-8"))
+    assert match, f"{name} not found in {gd_file.name}"
+    return int(match.group(1))
+
+
+def test_golden_hashes_match_the_scenarios_bundle_and_sim_version():
+    expected = ct.load_json(GOLDEN / "expected.json")
+    bundle = ct.load_json(GOLDEN / "config_bundle.json")
+    assert expected["sim_version"] == gd_int_constant(REPO / "sim" / "core" / "sim_version.gd", "SIM_VERSION")
+    assert expected["config_hash"] == bundle["config_hash"]
+    names = {p.stem for p in (GOLDEN / "scenarios").glob("*.json")}
+    assert set(expected["scenarios"]) == names
+    every = gd_int_constant(REPO / "sim" / "core" / "battle.gd", "CHECKPOINT_TICKS")
+    for name, golden in expected["scenarios"].items():
+        assert re.fullmatch(r"[0-9a-f]{64}", golden["final_hash"]), name
+        assert len(golden["checkpoints"]) == golden["ticks"] // every, name
+        assert all(re.fullmatch(r"[0-9a-f]{16}", c) for c in golden["checkpoints"]), name
 
 
 def test_sync_then_check():

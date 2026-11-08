@@ -50,7 +50,7 @@ Every design or technical decision, with its date, the options considered and th
 
 ### D-008 · 2026-11-08 · Golden tests on a frozen config
 
-- **Decision:** golden scenarios run on `sim/tests/golden/config_bundle.json`, a frozen copy of the M0 config, not the live balance files. Hashes are recorded once and verified on the headless worker, the desktop client and the phone. If no hashes are committed, the first CI run records them on Linux (with a warning) so the Android build can be checked against them; once committed they're verified strictly.
+- **Decision:** golden scenarios run on `sim/tests/golden/config_bundle.json`, a frozen copy of the M0 config, not the live balance files. Hashes are recorded once and verified on the headless worker, the desktop client and the phone. The M0 hashes were recorded by CI's headless worker on 2026-11-08 and committed as `sim/tests/golden/expected.json`. CI fails if that file is missing; it then records fresh hashes into a `golden-hashes` artifact for review, so a re-record is always a reviewed commit.
 - **Options:** run goldens on the live config and re-record after every retune.
 - **Reason:** balance changes shouldn't break determinism tests. Only a sim change, with a `SIM_VERSION` bump, means re-recording.
 

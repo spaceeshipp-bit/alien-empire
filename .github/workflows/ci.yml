@@ -40,18 +40,22 @@ jobs:
         run: timeout 300 godot --headless --path worker --import
       - name: Unit and golden tests on the headless worker
         run: |
-          expected="$GITHUB_WORKSPACE/sim/tests/golden/expected.json"
-          if [ -f "$expected" ]; then
-            timeout 600 godot --headless --path worker --script res://cli/run_tests.gd
-          else
-            echo "::warning::No golden hashes are committed yet. Recording them on this runner: commit the golden-hashes artifact as sim/tests/golden/expected.json."
-            timeout 600 godot --headless --path worker --script res://cli/run_tests.gd -- --record "$expected"
-            python3 tools/sync_sim.py
+          if [ ! -f sim/tests/golden/expected.json ]; then
+            # Only after a deliberate re-record (a SIM_VERSION bump): record on
+            # this runner for review, upload them, and fail.
+            mkdir -p "$RUNNER_TEMP/golden"
+            timeout 600 godot --headless --path worker --script res://cli/run_tests.gd -- --record "$RUNNER_TEMP/golden/expected.json" || true
+            echo "::error::sim/tests/golden/expected.json is missing. Hashes recorded on this runner are in the golden-hashes artifact: review them and commit the file."
+            exit 1
           fi
-      - uses: actions/upload-artifact@v4
+          timeout 600 godot --headless --path worker --script res://cli/run_tests.gd
+      - name: Upload newly recorded golden hashes
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
           name: golden-hashes
-          path: sim/tests/golden/expected.json
+          path: ${{ runner.temp }}/golden/expected.json
+          if-no-files-found: ignore
       - name: Import the client project
         run: timeout 300 godot --headless --path client --import
       - name: Unit and golden tests on the desktop client
@@ -67,10 +71,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: golden-hashes
-          path: sim/tests/golden
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

@@ -1,0 +1,67 @@
+{
+  "about": "Recorded by worker/cli/run_tests.gd --record. Every platform must reproduce these hashes.",
+  "config_hash": "38704caa93c96c8935791678cfc734ae0a09a350870b9419fd15bcb14fa00c85",
+  "recorded_with": "Linux, Godot 4.7.2-stable (official)",
+  "scenarios": {
+    "g01_single_lane": {
+      "checkpoints": [
+        "f811f57fcf0fde28",
+        "0403ea83f95d376a",
+        "462a33c53558f1e5"
+      ],
+      "final_hash": "66942f0bec9c963e7a07e77bb76116db736750d439ed8617a1faa41bc94edc60",
+      "outcome": "cleared",
+      "ticks": 307
+    },
+    "g02_bends_and_jitter": {
+      "checkpoints": [
+        "ed38406f7cd4de7a",
+        "a5481f0e9c5c1f0b",
+        "b1d7f5aee4992956",
+        "673fad6d2c7ffab1",
+        "af27ea070e4b0ad1",
+        "659b4c161dbc7e94",
+        "8076125dcb1454dd",
+        "60e7b58e09031649"
+      ],
+      "final_hash": "da0b89fdac587e1b29d9eb5644f0b699792fccbdedba9887333873b865fb87d2",
+      "outcome": "cleared",
+      "ticks": 865
+    },
+    "g03_air_and_titans": {
+      "checkpoints": [
+        "431695f2d1526c49",
+        "f36418c96b6ee239",
+        "c26913602bd1055f",
+        "ff5e7fcb9852eace",
+        "61f95c8eefd053ba",
+        "739842c9ac64d86b",
+        "0b2deb5049ce1336",
+        "4d710ff164ca1bb8",
+        "7f7f999b2e932a99",
+        "7cbf613447d53f7b",
+        "80d52c6835cfcb99"
+      ],
+      "final_hash": "2329e238c266ed5b55da15eee5f3c607f57c8312e0974c6fb804d83557a51a17",
+      "outcome": "cleared",
+      "ticks": 1132
+    },
+    "g04_dense_three_lanes": {
+      "checkpoints": [
+        "a21c5a01fe560d9e",
+        "bf96a35d889dd2ce",
+        "242efcd9b7033fae",
+        "cb9b72526bec74f5",
+        "d98c6ee9aab9f089",
+        "56bc77f2a46f4275",
+        "6253449ad418cdc8",
+        "26cc5b407af2545f",
+        "4883d3aeb3d89f0a"
+      ],
+      "final_hash": "1bdb297efc75d1086b49e226805388366f6f1e42ed4bbd90251a21c62f75b1b3",
+      "outcome": "cleared",
+      "ticks": 937
+    }
+  },
+  "sim_version": 1
+}
