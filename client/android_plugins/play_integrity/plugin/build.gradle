@@ -1,0 +1,26 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'com.alienempiretd.playintegrity'
+    compileSdk 35
+
+    defaultConfig {
+        // Matches gradle_build/min_sdk in client/export_presets.cfg.
+        minSdk 24
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Godot provides its library at runtime; compile against the exact engine version.
+    compileOnly 'org.godotengine:godot:4.7.2.stable'
+    // Also declared in client/addons/PlayIntegrity/export_plugin.gd so the game's
+    // Gradle build fetches it (an AAR doesn't carry its dependencies).
+    implementation 'com.google.android.play:integrity:1.6.0'
+}

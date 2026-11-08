@@ -1,0 +1,44 @@
+; Engine configuration file.
+; Alien Empire TD client. In M0 this is the test build: on-device sim tests and
+; the Plugin Lab. Run tools/sync_sim.py before opening it, so res://sim exists.
+
+config_version=5
+
+[aetd]
+
+play_integrity/cloud_project_number=""
+
+[application]
+
+config/name="Alien Empire TD M0"
+config/description="M0 test build: determinism checks and the Plugin Lab."
+run/main_scene="res://scenes/boot.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0.0431, 0.0863, 0.149, 1)
+config/icon="res://icon.svg"
+
+[debug]
+
+gdscript/warnings/integer_division=0
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1280
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/PlayIntegrity/plugin.cfg")
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.0431, 0.0863, 0.149, 1)
