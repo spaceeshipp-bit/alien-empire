@@ -25,12 +25,12 @@ class AndroidExportPlugin extends EditorExportPlugin:
 	func _supports_platform(platform: EditorExportPlatform) -> bool:
 		return platform is EditorExportPlatformAndroid
 
-	func _get_android_libraries(platform: EditorExportPlatform, debug: bool) -> PackedStringArray:
+	func _get_android_libraries(_platform: EditorExportPlatform, debug: bool) -> PackedStringArray:
 		if debug:
 			return PackedStringArray(["PlayIntegrity/bin/PlayIntegrity-debug.aar"])
 		return PackedStringArray(["PlayIntegrity/bin/PlayIntegrity-release.aar"])
 
-	func _get_android_dependencies(platform: EditorExportPlatform, debug: bool) -> PackedStringArray:
+	func _get_android_dependencies(_platform: EditorExportPlatform, _debug: bool) -> PackedStringArray:
 		return PackedStringArray(DEPENDENCIES)
 
 	func _get_name() -> String:
