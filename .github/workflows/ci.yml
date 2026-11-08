@@ -56,6 +56,11 @@ jobs:
           name: golden-hashes
           path: ${{ runner.temp }}/golden/expected.json
           if-no-files-found: ignore
+      - name: Cache the plugin downloads
+        uses: actions/cache@v4
+        with:
+          path: build/plugin-cache
+          key: plugin-downloads-${{ hashFiles('tools/fetch_plugins.sh') }}
       - name: Fetch the third-party Android plugins
         run: tools/fetch_plugins.sh
       - name: Import the client project
@@ -82,6 +87,11 @@ jobs:
           gradle-version: "8.14.3"
       - name: Install Godot and export templates
         run: tools/ci/install_godot.sh --templates
+      - name: Cache the plugin downloads
+        uses: actions/cache@v4
+        with:
+          path: build/plugin-cache
+          key: plugin-downloads-${{ hashFiles('tools/fetch_plugins.sh') }}
       - name: Fetch the third-party Android plugins
         run: tools/fetch_plugins.sh
       - name: Build our Android plugins
@@ -95,6 +105,13 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: tools/ci/prepare_android_export.sh
+      - name: Apply the owner's console settings
+        env:
+          # Set in the repo's Actions settings (docs/PLUGINS.md); each is optional.
+          PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER: ${{ vars.PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER }}
+          PLAY_GAMES_PROJECT_ID: ${{ vars.PLAY_GAMES_PROJECT_ID }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: python3 tools/ci/apply_owner_config.py
       - name: Export the debug APK
         run: |
           python3 tools/sync_sim.py
@@ -103,6 +120,8 @@ jobs:
           timeout 1200 godot --headless --path client --install-android-build-template \
             --export-debug "Android" "$GITHUB_WORKSPACE/build/android/aetd-m0-debug.apk"
           test -s build/android/aetd-m0-debug.apk
+      - name: Check every plugin is in the APK
+        run: tools/ci/check_apk_plugins.sh build/android/aetd-m0-debug.apk
       - name: Export the release AAB for Play
         if: steps.prepare.outputs.signing == 'upload-key'
         run: |

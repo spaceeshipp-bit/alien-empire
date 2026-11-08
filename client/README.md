@@ -5,18 +5,19 @@ The phone app. In M0 it's a test build with two screens: **Sim tests** (unit tes
 ## Open it
 
 1. From the repo root, run `python3 tools/sync_sim.py`. It copies `sim/` to `client/sim/`; the copy is git-ignored.
-2. Open `client/project.godot` in Godot 4.7.2.
-3. Press Play. On desktop the Plugin Lab checks report that they need Android.
+2. Run `tools/fetch_plugins.sh`. It downloads the pinned third-party Android plugins into `client/addons/` and checks their hashes. Run it before opening the editor: otherwise Godot drops the missing plugins from `project.godot`, and the AdMob addon downloads its binaries itself without a hash check.
+3. Open `client/project.godot` in Godot 4.7.2.
+4. Press Play. On desktop the Plugin Lab checks report that they need Android.
 
 ## Export the Android test build
 
-Needs JDK 17, the Android SDK, the Godot 4.7.2 export templates and network access for Gradle.
+CI builds it on every push (the `aetd-m0-debug-apk` artifact, plus `aetd-m0-release-aab` once the upload key is set up). To build it yourself you need JDK 17, the Android SDK, the Godot 4.7.2 export templates and network access for Gradle.
 
 1. `tools/build_android_plugins.sh` builds the Play Integrity plugin.
 2. In Godot, Project > Install Android Build Template.
-3. Project > Export > Android > Export Project (debug). The APK goes to `build/android/`.
+3. Project > Export > Android > Export Project (debug). The APK goes to `build/android/`. The "Android AAB" preset makes the release bundle for Play.
 
-Third-party plugins and the console setup are in `docs/PLUGINS.md`.
+The plugins, the owner's setup and the phone walkthrough are in `docs/PLUGINS.md`.
 
 ## Layout
 
