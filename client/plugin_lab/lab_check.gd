@@ -90,14 +90,28 @@ static func describe_api(obj: Object) -> String:
 			methods.append(str(method["name"]))
 		for sig in obj.get_signal_list():
 			signals.append(str(sig["name"]))
-	return "methods: %s; signals: %s" % [", ".join(methods), ", ".join(signals)]
+	var text: String = "methods: %s; signals: %s" % [", ".join(methods), ", ".join(signals)]
+	if obj.has_method("has_java_method"):
+		text += " (an Android plugin: its Java methods can't be listed, its signals can)"
+	return text
+
+
+## True if obj offers the method. An Android plugin's Engine singleton is a
+## JNISingleton: Godot 4.7 keeps its Java methods out of ClassDB, so has_method()
+## is false for them and has_java_method() answers instead.
+static func has_api_method(obj: Object, method: String) -> bool:
+	if obj.has_method(method):
+		return true
+	if obj.has_method("has_java_method"):
+		return bool(obj.call("has_java_method", method))
+	return false
 
 
 ## True if obj has every named method and signal; otherwise finishes the check
 ## with the plugin's real API listed.
 func require_api(obj: Object, methods: Array, signals: Array) -> bool:
 	for method in methods:
-		if not obj.has_method(method):
+		if not has_api_method(obj, method):
 			finish(false, "The plugin has no method %s. %s" % [method, describe_api(obj)])
 			return false
 	for sig in signals:

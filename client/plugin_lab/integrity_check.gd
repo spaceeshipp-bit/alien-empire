@@ -25,15 +25,18 @@ func run() -> void:
 		return
 	var project_number: String = str(ProjectSettings.get_setting(SETTING, "")).strip_edges()
 	if project_number.is_empty():
-		finish(false, "Set %s in Project Settings to your Google Cloud project number (docs/PLUGINS.md)." % SETTING)
+		finish(false, "This build has no Google Cloud project number. Set the PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER variable and build again (docs/PLUGINS.md).")
 		return
-	_plugin = Engine.get_singleton("PlayIntegrity")
-	if not require_api(_plugin, ["prepare", "request_token"], ["prepared", "prepare_failed", "token_ready", "token_failed"]):
-		return
-	_plugin.connect("prepared", _on_prepared)
-	_plugin.connect("prepare_failed", _on_failed.bind("Preparing the token provider failed"))
-	_plugin.connect("token_ready", _on_token)
-	_plugin.connect("token_failed", _on_failed.bind("The token request failed"))
+	if _plugin == null:
+		# Connect once; the plugin's signals outlive each run.
+		var plugin: Object = Engine.get_singleton("PlayIntegrity")
+		if not require_api(plugin, ["prepare", "request_token"], ["prepared", "prepare_failed", "token_ready", "token_failed"]):
+			return
+		_plugin = plugin
+		_plugin.connect("prepared", _on_prepared)
+		_plugin.connect("prepare_failed", _on_failed.bind("Preparing the token provider failed"))
+		_plugin.connect("token_ready", _on_token)
+		_plugin.connect("token_failed", _on_failed.bind("The token request failed"))
 	arm_timeout(90.0, "No integrity token within 90 seconds.")
 	log_line("Preparing the integrity token provider…")
 	_plugin.call("prepare", project_number)
