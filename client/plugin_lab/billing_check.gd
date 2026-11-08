@@ -1,15 +1,20 @@
 extends "res://plugin_lab/lab_check.gd"
-## Google Play Billing through the GodotGooglePlayBilling plugin
-## (godot-sdk-integrations, Godot 4.2+). Connects to Play, asks for one test
-## product and lists existing subscriptions. A pass means the plugin talks to
-## Google Play on this phone; real purchases come with the store in M9.
-## Setup (Play Console app, test product, license testers): docs/PLUGINS.md.
+## Google Play Billing through GodotGooglePlayBilling 3.3.0 (godot-sdk-integrations,
+## Play Billing Library 9.1.0). Connects to Play, asks for one test product and
+## lists existing subscriptions. A pass means the plugin talks to Google Play on
+## this phone; real purchases come with the store in M9.
+## Setup (Play Console app, test product, license tester): docs/PLUGINS.md.
 
 ## In-app product created in Play Console for this test.
 const TEST_PRODUCT := "m0_test_gems"
+## The plugin's Android library registers this Engine singleton.
+const SINGLETON := "GodotGooglePlayBilling"
 
+## One client for the app's lifetime: every BillingClient.new() re-initializes
+## the plugin's shared Android side.
 var _client: Object = null
-var _product_types: Dictionary = {}
+var _consts: Dictionary = {}
+var _found_product: bool = false
 
 
 func title() -> String:
@@ -19,7 +24,11 @@ func title() -> String:
 func availability() -> String:
 	if OS.get_name() != "Android":
 		return "Needs an Android phone"
-	return "Plugin installed" if find_api("BillingClient") != null else "Plugin not installed (docs/PLUGINS.md)"
+	if find_api("BillingClient") == null:
+		return "Plugin not installed (docs/PLUGINS.md)"
+	if not Engine.has_singleton(SINGLETON):
+		return "Addon present, but its Android library isn't in this build"
+	return "Plugin installed"
 
 
 func run() -> void:
@@ -27,41 +36,89 @@ func run() -> void:
 	if script == null:
 		finish(false, "BillingClient isn't in this build. Install the plugin (docs/PLUGINS.md).")
 		return
-	_client = script.new()
-	if _client is Node:
-		add_child(_client)
-	_product_types = script.get_script_constant_map().get("ProductType", {})
-	var methods := ["start_connection", "query_product_details", "query_purchases"]
-	var signals := ["connected", "connect_error", "query_product_details_response", "query_purchases_response"]
-	if not require_api(_client, methods, signals):
+	if not Engine.has_singleton(SINGLETON):
+		finish(false, "The %s Android library isn't in this build. Enable the plugin and export again." % SINGLETON)
 		return
+	if _client == null and not _create_client(script):
+		return
+	arm_timeout(30.0, "No answer from Google Play within 30 seconds.")
+	_found_product = false
+	if bool(_client.call("is_ready")):
+		_on_connected()
+	else:
+		log_line("Connecting to Google Play Billing…")
+		_client.call("start_connection")
+
+
+func _create_client(script: GDScript) -> bool:
+	var client: Object = script.new()
+	add_child(client)
+	var methods := ["start_connection", "is_ready", "query_product_details", "query_purchases"]
+	var signals := ["connected", "disconnected", "connect_error", "query_product_details_response", "query_purchases_response"]
+	if not require_api(client, methods, signals):
+		client.queue_free()
+		return false
+	_client = client
+	_consts = script.get_script_constant_map()
 	_client.connect("connected", _on_connected)
+	_client.connect("disconnected", func() -> void: log_line("Disconnected from Google Play Billing."))
 	_client.connect("connect_error", _on_connect_error)
 	_client.connect("query_product_details_response", _on_product_details)
 	_client.connect("query_purchases_response", _on_purchases)
-	arm_timeout(30.0, "No answer from Google Play within 30 seconds.")
-	log_line("Connecting to Google Play Billing…")
-	_client.call("start_connection")
+	return true
 
 
 func _on_connected() -> void:
 	log_line("Connected. Asking Play for product %s…" % TEST_PRODUCT)
-	_client.call("query_product_details", [TEST_PRODUCT], _product_types.get("INAPP", 0))
+	_client.call("query_product_details", PackedStringArray([TEST_PRODUCT]), _product_type("INAPP"))
 
 
 func _on_connect_error(code: int, message: String) -> void:
-	finish(false, "Couldn't connect to Play Billing: %d %s" % [code, message])
+	finish(false, "Couldn't connect to Play Billing: %s %s" % [_code_name(code), message])
 
 
 func _on_product_details(response: Dictionary) -> void:
-	log_line("Product answer: %s" % str(response))
-	_client.call("query_purchases", _product_types.get("SUBS", 1))
+	var code: int = int(response.get("response_code", -999))
+	if code != 0:
+		finish(false, "Product query failed: %s %s" % [_code_name(code), response.get("debug_message", "")])
+		return
+	for details in response.get("product_details", []):
+		if str(details.get("product_id", "")) != TEST_PRODUCT:
+			continue
+		_found_product = true
+		var offers: Variant = details.get("one_time_purchase_offer_details_list")
+		var price: String = "?"
+		if offers is Array and not offers.is_empty():
+			price = str(offers[0].get("formatted_price", "?"))
+		log_line("Play knows %s: %s, %s." % [TEST_PRODUCT, details.get("title", ""), price])
+	for missing in response.get("unfetched_products", []):
+		log_line("Play didn't return %s (status %d: 3 means not found yet, 4 no eligible offer, 2 bad id)." % [
+			missing.get("product_id", ""), int(missing.get("status_code", 0)),
+		])
+	log_line("Asking Play for this account's subscriptions…")
+	_client.call("query_purchases", _product_type("SUBS"))
 
 
 func _on_purchases(response: Dictionary) -> void:
-	log_line("Subscriptions answer: %s" % str(response))
-	var code: int = int(response.get("response_code", 0))
-	if code == 0:
-		finish(true, "Billing works: Google Play answered both queries.")
+	var code: int = int(response.get("response_code", -999))
+	if code != 0:
+		finish(false, "Subscription query failed: %s %s" % [_code_name(code), response.get("debug_message", "")])
+		return
+	# Purchases carry tokens and signatures, so only the count is shown.
+	var count: int = response.get("purchases", []).size()
+	if _found_product:
+		finish(true, "Billing works: Play returned %s and answered the subscription query (%d active)." % [TEST_PRODUCT, count])
 	else:
-		finish(false, "Google Play answered with response code %d." % code)
+		finish(false, "Play answered, but didn't return %s. Check the product is Active in Play Console and this phone's account is a license tester (docs/PLUGINS.md)." % TEST_PRODUCT)
+
+
+func _product_type(type_name: String) -> int:
+	return int(_consts.get("ProductType", {}).get(type_name, 0 if type_name == "INAPP" else 1))
+
+
+func _code_name(code: int) -> String:
+	var names: Dictionary = _consts.get("BillingResponseCode", {})
+	for key in names:
+		if int(names[key]) == code:
+			return "%s (%d)" % [key, code]
+	return str(code)

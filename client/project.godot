@@ -1,6 +1,10 @@
 ; Engine configuration file.
-; Alien Empire TD client. In M0 this is the test build: on-device sim tests and
-; the Plugin Lab. Run tools/sync_sim.py before opening it, so res://sim exists.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -31,7 +35,7 @@ window/handheld/orientation=1
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/PlayIntegrity/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotGooglePlayBilling/plugin.cfg", "res://addons/PlayIntegrity/plugin.cfg", "res://addons/admob/plugin.cfg")
 
 [input_devices]
 

@@ -83,3 +83,40 @@ def test_ci_scripts_exist_and_are_executable():
         assert path.exists(), script
         if script.endswith(".sh"):
             assert os.access(path, os.X_OK), f"{script} is not executable"
+
+
+def plugin_pins() -> list[dict[str, str]]:
+    text = (REPO / "tools" / "fetch_plugins.sh").read_text(encoding="utf-8")
+    block = re.search(r'^PINS="\n(.*?)^"$', text, re.S | re.M)
+    assert block, "PINS table not found in tools/fetch_plugins.sh"
+    pins = []
+    for line in block.group(1).splitlines():
+        dest, inner, sha, url = line.split("|")
+        pins.append({"dest": dest, "inner": inner, "sha": sha, "url": url})
+    return pins
+
+
+def test_plugin_pins_are_exact_releases_with_hashes():
+    pins = plugin_pins()
+    assert pins
+    for pin in pins:
+        assert re.fullmatch(r"[0-9a-f]{64}", pin["sha"]), pin["dest"]
+        assert re.fullmatch(r"https://github\.com/[\w.-]+/[\w.-]+/releases/download/[\w.-]+/[\w.-]+\.zip", pin["url"]), pin["url"]
+        assert "latest" not in pin["url"], pin["url"]
+    dests = [pin["dest"] for pin in pins]
+    assert len(dests) == len(set(dests))
+    for i, dest in enumerate(dests):
+        # A destination inside another one must be installed after it.
+        for outer in dests[i + 1:]:
+            assert not dest.startswith(outer + "/"), f"{dest} is listed before {outer}"
+
+
+def test_fetched_plugins_are_ignored_and_enabled():
+    ignored = (REPO / ".gitignore").read_text(encoding="utf-8").splitlines()
+    project = (REPO / "client" / "project.godot").read_text(encoding="utf-8")
+    enabled = set(re.findall(r'"(res://addons/[^"]+/plugin\.cfg)"', re.search(r"^enabled=.*$", project, re.M).group(0)))
+    tops = {pin["dest"] for pin in plugin_pins() if not any(pin["dest"].startswith(o["dest"] + "/") for o in plugin_pins())}
+    for dest in tops:
+        assert f"/client/{dest}/" in ignored, f"{dest} is fetched, so .gitignore must list /client/{dest}/"
+        assert f"res://{dest}/plugin.cfg" in enabled, f"enable res://{dest}/plugin.cfg in client/project.godot"
+

@@ -56,6 +56,8 @@ jobs:
           name: golden-hashes
           path: ${{ runner.temp }}/golden/expected.json
           if-no-files-found: ignore
+      - name: Fetch the third-party Android plugins
+        run: tools/fetch_plugins.sh
       - name: Import the client project
         run: timeout 300 godot --headless --path client --import
       - name: Unit and golden tests on the desktop client
@@ -80,6 +82,8 @@ jobs:
           gradle-version: "8.14.3"
       - name: Install Godot and export templates
         run: tools/ci/install_godot.sh --templates
+      - name: Fetch the third-party Android plugins
+        run: tools/fetch_plugins.sh
       - name: Build our Android plugins
         run: tools/build_android_plugins.sh
       - name: Prepare the export
