@@ -10,9 +10,11 @@ const TEST_PRODUCT := "m0_test_gems"
 ## The plugin's Android library registers this Engine singleton.
 const SINGLETON := "GodotGooglePlayBilling"
 
-## One client for the app's lifetime: every BillingClient.new() re-initializes
-## the plugin's shared Android side.
-var _client: Object = null
+## One client for the app's lifetime (see shared_client): every
+## BillingClient.new() re-initializes the plugin's Android side.
+const CLIENT_NODE := "PluginLabBillingClient"
+
+var _client: Node = null
 var _consts: Dictionary = {}
 var _found_product: bool = false
 
@@ -39,33 +41,41 @@ func run() -> void:
 	if not Engine.has_singleton(SINGLETON):
 		finish(false, "The %s Android library isn't in this build. Enable the plugin and export again." % SINGLETON)
 		return
-	if _client == null and not _create_client(script):
+	if _client == null and not _attach_client(script):
 		return
 	arm_timeout(30.0, "No answer from Google Play within 30 seconds.")
 	_found_product = false
+	var connecting: int = int(_consts.get("ConnectionState", {}).get("CONNECTING", 1))
 	if bool(_client.call("is_ready")):
 		_on_connected()
+	elif int(_client.call("get_connection_state")) == connecting:
+		# Asking again while connecting makes Play answer DEVELOPER_ERROR.
+		log_line("Still connecting to Google Play Billing…")
 	else:
 		log_line("Connecting to Google Play Billing…")
 		_client.call("start_connection")
 
 
-func _create_client(script: GDScript) -> bool:
-	var client: Object = script.new()
-	add_child(client)
-	var methods := ["start_connection", "is_ready", "query_product_details", "query_purchases"]
+## Connects this check to the app-wide client. The connections end by
+## themselves when this check is freed with the Lab screen.
+func _attach_client(script: GDScript) -> bool:
+	var client: Node = shared_client(CLIENT_NODE, script)
+	var methods := ["start_connection", "is_ready", "get_connection_state", "query_product_details", "query_purchases"]
 	var signals := ["connected", "disconnected", "connect_error", "query_product_details_response", "query_purchases_response"]
 	if not require_api(client, methods, signals):
-		client.queue_free()
 		return false
 	_client = client
 	_consts = script.get_script_constant_map()
 	_client.connect("connected", _on_connected)
-	_client.connect("disconnected", func() -> void: log_line("Disconnected from Google Play Billing."))
+	_client.connect("disconnected", _on_disconnected)
 	_client.connect("connect_error", _on_connect_error)
 	_client.connect("query_product_details_response", _on_product_details)
 	_client.connect("query_purchases_response", _on_purchases)
 	return true
+
+
+func _on_disconnected() -> void:
+	log_line("Disconnected from Google Play Billing.")
 
 
 func _on_connected() -> void:

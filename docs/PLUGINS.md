@@ -132,7 +132,8 @@ Send screenshots of the **Sim tests** screen and of each Plugin Lab check after 
 | --- | --- |
 | "Plugin not installed" or "isn't in this build" | The APK was built without the plugin. Check the CI log's **Check every plugin is in the APK** step. |
 | Billing: "didn't return m0_test_gems" | The product isn't **Active** yet, or hasn't propagated, or the phone's main account isn't a license tester. |
-| Billing: `BILLING_UNAVAILABLE` or `DEVELOPER_ERROR` | No internal-testing release with the billing library yet, or the Play Store app is out of date. |
+| Billing: `BILLING_UNAVAILABLE` or `DEVELOPER_ERROR` | Read Play's message after the code first. Usually there's no internal-testing release with the billing library yet, or the Play Store app is out of date. |
+| Sign-in: "didn't finish within 3 minutes" | The Google account picker stayed open; run the check again and pick your account. |
 | AdMob: "failed to load" | Network or ad availability. Google's demo units usually fill; run it again. |
 | Push: "built without google-services.json" | The `GOOGLE_SERVICES_JSON` secret was missing when this build ran. Add it and rebuild. |
 | Push: "permission is off" | Allow notifications for the app in Android settings, then run again. |

@@ -141,12 +141,14 @@ func _on_user_earned_reward(item: Object) -> void:
 
 func _on_ad_dismissed() -> void:
 	log_line("The ad was closed.")
+	var run_id: int = _run_id
+	# The reward callback can land just after the dismissal, so keep the ad
+	# (which holds the reward listener) a moment longer before destroying it.
+	await get_tree().create_timer(1.0).timeout
 	if _ad != null:
 		_ad.call("destroy")
 		_ad = null
-	# The reward callback can land just after the dismissal; give it a moment.
-	await get_tree().create_timer(1.0).timeout
-	if not _rewarded:
+	if not _rewarded and run_id == _run_id:
 		finish(false, "The ad closed before the SDK granted the reward. Run again and watch it to the end.")
 
 

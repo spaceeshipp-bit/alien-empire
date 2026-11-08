@@ -12,6 +12,8 @@ const SIGN_IN_CLASS := "PlayGamesSignInClient"
 const PLUGIN_NAME := "GodotPlayGameServices"
 ## Set by CI from the PLAY_GAMES_PROJECT_ID variable (docs/PLUGINS.md).
 const SETTING := "aetd/play_games/project_id"
+## The sign-in client lives as long as the app (see shared_client).
+const CLIENT_NODE := "PluginLabPlayGamesSignIn"
 
 var _client: Node = null
 
@@ -54,8 +56,9 @@ func run() -> void:
 		if script == null or not script.can_instantiate():
 			finish(false, "No usable %s class. GodotPlayGameServices offers: %s" % [SIGN_IN_CLASS, describe_api(services)])
 			return
-		_client = script.new()
-		add_child(_client)
+		# Its _ready() hooks the plugin's signals, so it must enter the tree
+		# after initialize().
+		_client = shared_client(CLIENT_NODE, script)
 	if not require_api(_client, ["is_authenticated", "sign_in"], ["user_authenticated"]):
 		return
 	if _project_id().is_empty():
@@ -72,6 +75,8 @@ func _on_checked(is_authenticated: bool) -> void:
 		return
 	log_line("Not signed in yet. Opening Google sign-in…")
 	_listen(_on_signed_in)
+	# Picking an account can take a while; give the sign-in screen its own time.
+	arm_timeout(180.0, "Sign-in didn't finish within 3 minutes.")
 	_client.call("sign_in")
 
 

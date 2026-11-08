@@ -12,6 +12,7 @@ signal finished(ok: bool)
 
 var _done: bool = false
 var _run_id: int = 0
+var _timer_id: int = 0
 
 
 func title() -> String:
@@ -28,6 +29,7 @@ func availability() -> String:
 func start() -> void:
 	_done = false
 	_run_id += 1
+	_timer_id += 1
 	run()
 
 
@@ -49,12 +51,13 @@ func finish(ok: bool, text: String) -> void:
 	finished.emit(ok)
 
 
-## Fails the current run if it hasn't finished within the given time. A timer
-## left over from an earlier run is ignored.
+## Fails the current run if it hasn't finished within the given time. Arming
+## again replaces the earlier deadline, and a new run cancels it too.
 func arm_timeout(seconds: float, message: String) -> void:
-	var run_id: int = _run_id
+	_timer_id += 1
+	var timer_id: int = _timer_id
 	get_tree().create_timer(seconds).timeout.connect(func() -> void:
-		if run_id == _run_id:
+		if timer_id == _timer_id:
 			finish(false, message)
 	)
 
@@ -71,6 +74,20 @@ func find_api(api_name: String) -> Object:
 	if Engine.has_singleton(api_name):
 		return Engine.get_singleton(api_name)
 	return null
+
+
+## Returns the app-wide instance of a plugin's client node, creating it under
+## the tree root on first use. The Lab's checks are freed when you leave the
+## screen, but a plugin client must live as long as the app: a new one would
+## start the plugin's Android side again.
+func shared_client(node_name: String, script: GDScript) -> Node:
+	var root: Window = get_tree().root
+	var client: Node = root.get_node_or_null(node_name)
+	if client == null:
+		client = script.new()
+		client.name = node_name
+		root.add_child(client)
+	return client
 
 
 ## Lists what an object offers, so an API mismatch shows the real names.
