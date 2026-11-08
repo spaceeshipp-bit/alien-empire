@@ -28,7 +28,9 @@ python3 -m pytest -q tools/tests          # tool tests, reference vectors, repo 
 
 ```sh
 python3 tools/sync_sim.py
+tools/fetch_plugins.sh                     # pinned Android plugins for the client
 godot --headless --path worker --script res://cli/run_tests.gd
+godot --headless --path client -- --run-tests-and-quit
 ```
 
-CI (`.github/workflows/ci.yml`) runs these on every push, runs them again on the desktop client, and builds an Android test APK.
+CI (`.github/workflows/ci.yml`) runs these on every push and builds the Android test APK, `aetd-m0-debug.apk`, with every plugin in it. Installing it on a phone and the one-time console setup: [`docs/PLUGINS.md`](docs/PLUGINS.md).

@@ -7,7 +7,8 @@
 #   tools/make_upload_key.sh [output folder]   # default: ~/aetd-upload-key
 #
 # The key and its password are written outside the repo, never committed. Keep
-# a copy of both somewhere safe: Play only accepts uploads signed with this key.
+# a copy of both somewhere safe: Play only accepts uploads signed with this key
+# (a lost upload key can be reset through Play Console, which takes a while).
 set -euo pipefail
 
 out="${1:-$HOME/aetd-upload-key}"
@@ -57,8 +58,10 @@ open it, copy everything, paste it as the secret's value:
   ANDROID_KEYSTORE_PASSWORD  $out/ANDROID_KEYSTORE_PASSWORD.txt
   ANDROID_KEY_ALIAS          $out/ANDROID_KEY_ALIAS.txt   (it is "$alias_name")
 
-Then keep a private copy of upload-key.jks and the password, for example in a
-password manager, and delete this folder (and the codespace, if you used one).
+Back the key up before you delete anything: save the text of
+ANDROID_KEYSTORE_BASE64.txt and the password together in a password manager.
+Together they are the whole key ("base64 -d" turns the text back into
+upload-key.jks). Then delete this folder, and the codespace if you used one.
 
 The key's SHA-1, needed later for Play Games sign-in on sideloaded builds:
   $sha1

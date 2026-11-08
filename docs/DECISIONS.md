@@ -108,6 +108,54 @@ Every design or technical decision, with its date, the options considered and th
 - **Options:** wait for network access before writing any Godot code.
 - **Reason:** everything that could be built and checked was, so the first Godot run only has to confirm it.
 
+### D-018 · 2026-11-08 · Pinned plugin releases with checked hashes
+
+- **Decision:** `tools/fetch_plugins.sh` downloads exact releases and refuses any file whose SHA-256 differs from the pinned one: GodotGooglePlayBilling 3.3.0, Poing AdMob v5.1.0 (plus its Android and iOS binaries for Godot 4.7.2), Godotx Firebase 3.1.0 (Core and Messaging only) and Play Games Services for Godot v3.4.0. The downloads are git-ignored; CI fetches them in every job that opens the client. Each hash matched GitHub's published digest and was re-checked by a second download.
+- **Options:** commit the plugins to the repo; fetch "latest" releases.
+- **Reason:** the build prompt asks for licensed, recorded dependencies, and a pinned hash makes every build use the reviewed files. "Latest" would have picked the Godot 3 billing plugin (1.4.0 is newer than 3.3.0). Pinning AdMob's binaries also stops its addon from downloading them unchecked during headless runs. Sources: each plugin's release page, linked in `docs/PLUGINS.md`.
+
+### D-019 · 2026-11-08 · What each Plugin Lab check counts as a pass
+
+- **Decision:** billing passes when Play returns the test product; ads when Google's demo rewarded ad grants its reward; push when the phone gets an FCM token, followed by a console test message; sign-in when Play Games reports the player signed in; Play Integrity when a token arrives. M0 uses Google's sample AdMob app ID and demo ad unit, so no AdMob account is needed yet.
+- **Options:** pass billing on any answer from Play; pass ads on load; require a decoded Integrity verdict.
+- **Reason:** each pass proves the plugin works end to end on the phone. A sideloaded build gets an "unrecognized" Integrity verdict by design ([verdicts](https://developer.android.com/google/play/integrity/verdicts)), and decoding is server work in M4. Demo units are the documented way to test ([test ads](https://developers.google.com/admob/android/test-ads)).
+
+### D-020 · 2026-11-08 · The owner's upload key signs every CI build
+
+- **Decision:** when the repo has the upload key as Actions secrets, CI signs both the debug APK and a release AAB with it and uploads both; otherwise it signs the APK with a throwaway key and builds no AAB. The version code is the CI run number. `tools/make_upload_key.sh` makes the key (RSA 4096, random password) in a Codespace or on any machine with Java.
+- **Options:** a throwaway key per run (the M0 start); a separate stable debug key; Play's internal app sharing for debuggable builds.
+- **Reason:** new apps must upload a signed App Bundle ([Play](https://support.google.com/googleplay/android-developer/answer/9859348)), each upload needs a higher version code, and Play Games ties sign-in to the signing key's SHA-1 ([PGS setup](https://developer.android.com/games/pgs/console/setup)). One stable key covers all three and lets each build update the last. A lost upload key can be reset through Play Console ([Play App Signing](https://support.google.com/googleplay/android-developer/answer/9842756)).
+
+### D-021 · 2026-11-08 · Owner settings live in the repo's Actions settings
+
+- **Decision:** the Play Integrity cloud project number and the Play Games project ID are Actions variables; `google-services.json` and the upload key are Actions secrets. `tools/ci/apply_owner_config.py` writes them into the client before each export and rejects malformed values.
+- **Options:** commit them to `project.godot`; ask the owner to edit files.
+- **Reason:** the owner never edits code, and nothing tied to the owner's accounts lands in the public repo. Firebase advises keeping its config file out of open-source repos ([Firebase](https://firebase.google.com/docs/projects/learn-more)).
+
+### D-022 · 2026-11-08 · Firebase's Gradle edit is made by an export plugin
+
+- **Decision:** `client/addons/firebase_gradle` adds Google's `google-services` Gradle plugin (4.4.4, the version the Firebase addon asks for) to the Android build template at the start of each export, only when `res://google-services.json` exists.
+- **Options:** edit the template once by hand, as the addon's README says; patch it in a CI script after installing the template ourselves.
+- **Reason:** Godot 4.7.2 reinstalls the template on every export that passes `--install-android-build-template`, which would wipe a one-time edit. Without the config file the Gradle plugin fails the build, while an unpatched build still works and the Lab reports Firebase as unconfigured. Tested locally with a placeholder config: the Firebase resources appeared in the APK.
+
+### D-023 · 2026-11-08 · Gradle's open-source CI cache
+
+- **Decision:** CI uses `gradle/actions/setup-gradle@v6` with `cache-provider: basic`, the MIT-licensed cache built on GitHub's cache.
+- **Options:** the default "enhanced" cache, a proprietary component; dropping the action.
+- **Reason:** upgrading to v6 with the default means accepting the Gradle Technologies Terms of Use ([v6.0.0 release notes](https://github.com/gradle/actions/releases/tag/v6.0.0), [DISTRIBUTION.md](https://github.com/gradle/actions/blob/v6.4.1/DISTRIBUTION.md)), which is the owner's call. The action only installs Gradle for our small Play Integrity plugin, so the basic cache loses little. The owner can switch it (Q8).
+
+### D-024 · 2026-11-08 · Node 24 action versions; builds uploaded unzipped
+
+- **Decision:** CI uses checkout v7, setup-python v7, setup-java v6, cache v6, upload-artifact v7 and setup-gradle v6, all running on Node 24. The APK and AAB are uploaded with `archive: false`, so each artifact is the file itself (`aetd-m0-debug.apk`, `aetd-m0-release.aab`).
+- **Options:** stay on the v4/v5 actions, which GitHub now forces onto Node 24 with a warning.
+- **Reason:** GitHub removed Node 20 from its runners on 2026-09-23 ([changelog](https://github.blog/changelog/2026-09-23-node-20-is-no-longer-available-in-github-actions)). None of the new majors' breaking changes touch how CI uses them. A phone can open an unzipped APK straight from the download.
+
+### D-025 · 2026-11-08 · Godot's generated files are committed; autoloads keep res:// paths
+
+- **Decision:** the `.uid` and `.import` files Godot writes next to our own scripts and assets are committed. Autoloads in `project.godot` must use `res://` paths; a tool test enforces it.
+- **Options:** ignore the generated files.
+- **Reason:** Godot 4.7's [version control guide](https://docs.godotengine.org/en/4.7/tutorials/best_practices/version_control_systems.html) ignores only `.godot/` and `*.translation`. The Play Games addon rewrites its autoload to a `uid://` value on every editor start, and fetched addons get different uids on each machine, so a committed `uid://` autoload would break everywhere else.
+
 ## Open questions for the owner
 
 | # | Question | Current default | Needed by |
@@ -118,3 +166,5 @@ Every design or technical decision, with its date, the options considered and th
 | Q4 | Field tower range: +5% of base per level, or compounding? Sell refund: 70% of everything spent, or of the build cost? | Base, everything spent | M2 |
 | Q5 | How long does the Ion Disruptor's slow last, and does the Sensor Beacon mark while in range or per hit? | Not set | M2 |
 | Q6 | The game's package name (needs the title). | Test app uses `com.alienempiretd.pluginlab` | First Play upload of the game |
+| Q7 | The build prompt's speed target, a 180-second raid replayed in under 100 ms on one core, looks tight for pure GDScript once combat is in (see M0 open issues). Keep the target and the pure-GDScript rule, relax the target, or move the sim core to a GDExtension? | Keep both until combat exists to measure | Before M2 |
+| Q8 | CI's Gradle cache: keep the MIT-licensed basic cache, or accept Gradle's terms for the enhanced one (D-023)? | Basic | Any time |
