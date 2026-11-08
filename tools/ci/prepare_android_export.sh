@@ -1,27 +1,75 @@
 #!/usr/bin/env bash
-# Prepares a CI runner to export the Android debug APK: a throwaway debug
-# keystore and Godot editor settings pointing at the Android SDK and JDK.
+# Prepares a CI runner to export the Android builds: signing, version numbers
+# and Godot editor settings pointing at the Android SDK and JDK.
+#
+# Signing: if the repo has the owner's upload key as secrets
+# (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS), both
+# the debug APK and the release AAB are signed with it, so every build has the
+# same certificate. Otherwise a throwaway debug key is made and only the debug
+# APK can be built. Setup: docs/PLUGINS.md.
+#
 # Needs ANDROID_HOME and JAVA_HOME (set by GitHub's runner and setup-java).
+# VERSION_CODE (default GITHUB_RUN_NUMBER) sets the Android version code, which
+# must rise with every upload to Play.
 set -euo pipefail
 
 : "${ANDROID_HOME:?ANDROID_HOME must point at the Android SDK}"
 : "${JAVA_HOME:?JAVA_HOME must point at JDK 17}"
 
-keystore="${RUNNER_TEMP:-/tmp}/debug.keystore"
-if [ ! -f "$keystore" ]; then
-  keytool -genkeypair -noprompt -keystore "$keystore" -storepass android \
-    -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 \
-    -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+repo="$(cd "$(dirname "$0")/../.." && pwd)"
+temp="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+version_code="${VERSION_CODE:-${GITHUB_RUN_NUMBER:-1}}"
+
+if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+  : "${ANDROID_KEYSTORE_PASSWORD:?the ANDROID_KEYSTORE_PASSWORD secret is missing}"
+  : "${ANDROID_KEY_ALIAS:?the ANDROID_KEY_ALIAS secret is missing}"
+  signing="upload-key"
+  keystore="$temp/upload.keystore"
+  key_user="$ANDROID_KEY_ALIAS"
+  key_pass="$ANDROID_KEYSTORE_PASSWORD"
+  printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$keystore"
+else
+  signing="throwaway"
+  keystore="$temp/debug.keystore"
+  key_user="androiddebugkey"
+  key_pass="android"
+  if [ ! -f "$keystore" ]; then
+    keytool -genkeypair -noprompt -keystore "$keystore" -storepass "$key_pass" \
+      -alias "$key_user" -keypass "$key_pass" -keyalg RSA -keysize 2048 \
+      -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+  fi
 fi
 
-# Godot reads these instead of the per-machine export credentials file.
-if [ -n "${GITHUB_ENV:-}" ]; then
-  {
-    echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$keystore"
-    echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey"
-    echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android"
-  } >> "$GITHUB_ENV"
+if ! cert="$(keytool -list -v -keystore "$keystore" -storepass "$key_pass" -alias "$key_user" 2>&1)"; then
+  echo "error: can't open the signing key. Check the ANDROID_KEY_ALIAS and ANDROID_KEYSTORE_PASSWORD secrets." >&2
+  printf '%s\n' "$cert" | grep -i "keytool error" >&2 || true
+  exit 1
 fi
+sha1="$(printf '%s\n' "$cert" | sed -n 's/^[[:space:]]*SHA1: //p' | head -1)"
+sha256="$(printf '%s\n' "$cert" | sed -n 's/^[[:space:]]*SHA256: //p' | head -1)"
+
+# Godot reads these instead of the per-machine export credentials file.
+exports=(
+  "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$keystore"
+  "GODOT_ANDROID_KEYSTORE_DEBUG_USER=$key_user"
+  "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=$key_pass"
+)
+if [ "$signing" = "upload-key" ]; then
+  exports+=(
+    "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=$keystore"
+    "GODOT_ANDROID_KEYSTORE_RELEASE_USER=$key_user"
+    "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=$key_pass"
+  )
+fi
+if [ -n "${GITHUB_ENV:-}" ]; then
+  printf '%s\n' "${exports[@]}" >> "$GITHUB_ENV"
+fi
+if [ -n "${GITHUB_OUTPUT:-}" ]; then
+  echo "signing=$signing" >> "$GITHUB_OUTPUT"
+fi
+
+# Every export preset gets this run's version code.
+sed -i "s/^version\/code=.*/version\/code=$version_code/" "$repo/client/export_presets.cfg"
 
 # The settings file name has changed across Godot 4 releases; write both forms.
 config="$HOME/.config/godot"
@@ -33,9 +81,22 @@ for name in editor_settings-4.tres editor_settings-4.7.tres; do
 [resource]
 export/android/android_sdk_path = "$ANDROID_HOME"
 export/android/java_sdk_path = "$JAVA_HOME"
-export/android/debug_keystore = "$keystore"
-export/android/debug_keystore_user = "androiddebugkey"
-export/android/debug_keystore_pass = "android"
 EOF
 done
-echo "Android export prepared (keystore $keystore)"
+
+summary="Android signing: **$signing** key, version code **$version_code**.
+
+| Certificate | Fingerprint |
+| --- | --- |
+| SHA-1 | \`$sha1\` |
+| SHA-256 | \`$sha256\` |
+"
+if [ "$signing" = "throwaway" ]; then
+  summary+="
+This key is new on every run, so this build can't update an earlier one, and Play Games sign-in can't be set up for it. Add the upload key secrets (docs/PLUGINS.md) for a stable key and a Play-ready AAB.
+"
+fi
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+  printf '%s' "$summary" >> "$GITHUB_STEP_SUMMARY"
+fi
+printf '%s' "$summary"

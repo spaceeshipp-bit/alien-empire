@@ -120,3 +120,27 @@ def test_fetched_plugins_are_ignored_and_enabled():
         assert f"/client/{dest}/" in ignored, f"{dest} is fetched, so .gitignore must list /client/{dest}/"
         assert f"res://{dest}/plugin.cfg" in enabled, f"enable res://{dest}/plugin.cfg in client/project.godot"
 
+
+def export_presets() -> dict[str, dict[str, str]]:
+    sections: dict[str, dict[str, str]] = {}
+    current = None
+    for line in (REPO / "client" / "export_presets.cfg").read_text(encoding="utf-8").splitlines():
+        if line.startswith("["):
+            current = sections.setdefault(line.strip("[]"), {})
+        elif "=" in line and current is not None:
+            key, value = line.split("=", 1)
+            current[key] = value
+    return sections
+
+
+def test_aab_preset_matches_the_apk_preset():
+    presets = export_presets()
+    apk, aab = presets["preset.0"], presets["preset.1"]
+    assert apk["name"] == '"Android"' and aab["name"] == '"Android AAB"'
+    differ = {"name", "export_path"}
+    assert {k: v for k, v in apk.items() if k not in differ} == {k: v for k, v in aab.items() if k not in differ}
+    apk_opts, aab_opts = presets["preset.0.options"], presets["preset.1.options"]
+    assert apk_opts["gradle_build/export_format"] == "0" and aab_opts["gradle_build/export_format"] == "1"
+    assert {k: v for k, v in apk_opts.items() if k != "gradle_build/export_format"} == {
+        k: v for k, v in aab_opts.items() if k != "gradle_build/export_format"
+    }

@@ -87,6 +87,13 @@ jobs:
       - name: Build our Android plugins
         run: tools/build_android_plugins.sh
       - name: Prepare the export
+        id: prepare
+        env:
+          # The owner's upload key (docs/PLUGINS.md). Without it the debug APK
+          # gets a throwaway key and no AAB is built.
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: tools/ci/prepare_android_export.sh
       - name: Export the debug APK
         run: |
@@ -96,7 +103,18 @@ jobs:
           timeout 1200 godot --headless --path client --install-android-build-template \
             --export-debug "Android" "$GITHUB_WORKSPACE/build/android/aetd-m0-debug.apk"
           test -s build/android/aetd-m0-debug.apk
+      - name: Export the release AAB for Play
+        if: steps.prepare.outputs.signing == 'upload-key'
+        run: |
+          timeout 1200 godot --headless --path client \
+            --export-release "Android AAB" "$GITHUB_WORKSPACE/build/android/aetd-m0-release.aab"
+          test -s build/android/aetd-m0-release.aab
       - uses: actions/upload-artifact@v4
         with:
           name: aetd-m0-debug-apk
           path: build/android/aetd-m0-debug.apk
+      - uses: actions/upload-artifact@v4
+        if: steps.prepare.outputs.signing == 'upload-key'
+        with:
+          name: aetd-m0-release-aab
+          path: build/android/aetd-m0-release.aab
