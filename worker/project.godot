@@ -1,0 +1,14 @@
+; Engine configuration file.
+; Headless sim worker: the shared sim core with no rendering. In M0 it runs the
+; unit and golden tests; from M4 the server uses it to replay battles.
+
+config_version=5
+
+[application]
+
+config/name="Alien Empire TD sim worker"
+config/features=PackedStringArray("4.7")
+
+[debug]
+
+gdscript/warnings/integer_division=0

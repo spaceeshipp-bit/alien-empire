@@ -1,0 +1,335 @@
+{
+  "config_hash": "38704caa93c96c8935791678cfc734ae0a09a350870b9419fd15bcb14fa00c85",
+  "data": {
+    "counters": {
+      "counters": {
+        "flak_battery": {
+          "air": {
+            "rating": "strong"
+          },
+          "armored": {
+            "rating": "cant_hit"
+          },
+          "cloaked": {
+            "rating": "cant_hit",
+            "unrevealed_damage_bp": 0
+          },
+          "shielded": {
+            "rating": "cant_hit"
+          },
+          "swarm": {
+            "rating": "cant_hit"
+          },
+          "titan": {
+            "rating": "cant_hit"
+          }
+        },
+        "ion_disruptor": {
+          "air": {
+            "rating": "neutral"
+          },
+          "armored": {
+            "rating": "weak"
+          },
+          "cloaked": {
+            "rating": "neutral",
+            "unrevealed_damage_bp": 0
+          },
+          "shielded": {
+            "rating": "strong"
+          },
+          "swarm": {
+            "rating": "weak"
+          },
+          "titan": {
+            "rating": "neutral"
+          }
+        },
+        "plasma_torch": {
+          "air": {
+            "rating": "cant_hit"
+          },
+          "armored": {
+            "rating": "weak"
+          },
+          "cloaked": {
+            "rating": "neutral",
+            "unrevealed_damage_bp": 5000
+          },
+          "shielded": {
+            "rating": "neutral"
+          },
+          "swarm": {
+            "rating": "strong"
+          },
+          "titan": {
+            "rating": "neutral"
+          }
+        },
+        "pulse_turret": {
+          "air": {
+            "rating": "neutral"
+          },
+          "armored": {
+            "rating": "weak"
+          },
+          "cloaked": {
+            "rating": "neutral",
+            "unrevealed_damage_bp": 0
+          },
+          "shielded": {
+            "rating": "neutral"
+          },
+          "swarm": {
+            "rating": "neutral"
+          },
+          "titan": {
+            "rating": "neutral"
+          }
+        },
+        "railgun": {
+          "air": {
+            "rating": "cant_hit"
+          },
+          "armored": {
+            "rating": "strong"
+          },
+          "cloaked": {
+            "rating": "neutral",
+            "unrevealed_damage_bp": 0
+          },
+          "shielded": {
+            "rating": "neutral"
+          },
+          "swarm": {
+            "rating": "weak"
+          },
+          "titan": {
+            "rating": "strong"
+          }
+        }
+      }
+    },
+    "damage": {
+      "armor_constant": 100,
+      "bonus_pool": {
+        "full_value_until_bp": 3000,
+        "partial_rate_bp": 5000,
+        "partial_value_until_bp": 9000
+      },
+      "counter_ratings_bp": {
+        "cant_hit": 0,
+        "neutral": 10000,
+        "strong": 15000,
+        "weak": 5000
+      },
+      "max_reduction_bp": 6000,
+      "min_damage_x100": 100,
+      "shield_multipliers_bp": {
+        "emp": 30000,
+        "standard": 10000,
+        "thermal": 5000
+      }
+    },
+    "enemies": {
+      "enemies": [
+        {
+          "abilities": [],
+          "armor": 0,
+          "class": "swarm",
+          "hp_x100": 4000,
+          "id": "swarmer",
+          "leak_lives": 1,
+          "movement": "ground",
+          "shield_x100": 0,
+          "speed_mtps": 2000
+        },
+        {
+          "abilities": [],
+          "armor": 150,
+          "class": "armored",
+          "hp_x100": 36000,
+          "id": "carapace_brute",
+          "leak_lives": 3,
+          "movement": "ground",
+          "shield_x100": 0,
+          "speed_mtps": 700
+        },
+        {
+          "abilities": [],
+          "armor": 20,
+          "class": "shielded",
+          "hp_x100": 8000,
+          "id": "shield_drone",
+          "leak_lives": 1,
+          "movement": "ground",
+          "shield_x100": 24000,
+          "speed_mtps": 1200
+        },
+        {
+          "abilities": [],
+          "armor": 10,
+          "class": "air",
+          "hp_x100": 8000,
+          "id": "skimmer",
+          "leak_lives": 1,
+          "movement": "air",
+          "shield_x100": 0,
+          "speed_mtps": 1600
+        },
+        {
+          "abilities": [],
+          "armor": 30,
+          "class": "cloaked",
+          "hp_x100": 14000,
+          "id": "phaser",
+          "leak_lives": 1,
+          "movement": "ground",
+          "shield_x100": 0,
+          "speed_mtps": 1400
+        },
+        {
+          "abilities": [
+            {
+              "count": 6,
+              "enemy": "swarmer",
+              "type": "spawn_on_death"
+            }
+          ],
+          "armor": 100,
+          "class": "titan",
+          "hp_x100": 250000,
+          "id": "hive_carrier",
+          "leak_lives": 1,
+          "movement": "ground",
+          "shield_x100": 40000,
+          "speed_mtps": 500
+        }
+      ]
+    },
+    "manifest": {
+      "config_version": 1,
+      "label": "M0 baseline: combat tables from the build prompt of 2026-11-07",
+      "schema_version": 1
+    },
+    "status_effects": {
+      "mark": {
+        "damage_taken_bp": 1000,
+        "stacks": false
+      },
+      "reveal": {
+        "linger_ms": 3000
+      },
+      "shield_regen": {
+        "delay_ms": 3000,
+        "per_second_x100": 1500
+      },
+      "slow": {
+        "max_total_bp": 4000
+      },
+      "stun": {
+        "immune_classes": [
+          "titan"
+        ],
+        "raid_commanders_immune": true
+      }
+    },
+    "towers": {
+      "field_upgrades": {
+        "cost_growth_bp": 15000,
+        "damage_growth_bp": 14500,
+        "first_upgrade_cost_bp": 8000,
+        "max_level": 4,
+        "range_step_bp": 500,
+        "sell_refund_bp": 7000
+      },
+      "towers": [
+        {
+          "abilities": [],
+          "armor_pierce_bp": 0,
+          "cost_credits": 100,
+          "damage_type": "standard",
+          "damage_x100": 1000,
+          "id": "pulse_turret",
+          "range_mt": 3000,
+          "role": "Generalist, hits ground and air",
+          "shots_per_s_x100": 200,
+          "splash_mt": 0
+        },
+        {
+          "abilities": [],
+          "armor_pierce_bp": 0,
+          "cost_credits": 150,
+          "damage_type": "thermal",
+          "damage_x100": 500,
+          "id": "plasma_torch",
+          "range_mt": 1800,
+          "role": "Short-range splash, thermal",
+          "shots_per_s_x100": 250,
+          "splash_mt": 1000
+        },
+        {
+          "abilities": [],
+          "armor_pierce_bp": 7500,
+          "cost_credits": 200,
+          "damage_type": "standard",
+          "damage_x100": 5000,
+          "id": "railgun",
+          "range_mt": 5000,
+          "role": "Long range, pierces armor",
+          "shots_per_s_x100": 50,
+          "splash_mt": 0
+        },
+        {
+          "abilities": [
+            {
+              "slow_bp": 2000,
+              "type": "slow"
+            }
+          ],
+          "armor_pierce_bp": 0,
+          "cost_credits": 150,
+          "damage_type": "emp",
+          "damage_x100": 1000,
+          "id": "ion_disruptor",
+          "range_mt": 3000,
+          "role": "EMP, strong against shields, slows",
+          "shots_per_s_x100": 160,
+          "splash_mt": 0
+        },
+        {
+          "abilities": [],
+          "armor_pierce_bp": 0,
+          "cost_credits": 150,
+          "damage_type": "standard",
+          "damage_x100": 1200,
+          "id": "flak_battery",
+          "range_mt": 3500,
+          "role": "Anti-air splash",
+          "shots_per_s_x100": 120,
+          "splash_mt": 800
+        },
+        {
+          "abilities": [
+            {
+              "type": "reveal"
+            },
+            {
+              "type": "mark"
+            }
+          ],
+          "armor_pierce_bp": 0,
+          "cost_credits": 125,
+          "damage_type": "none",
+          "damage_x100": 0,
+          "id": "sensor_beacon",
+          "range_mt": 3000,
+          "role": "Reveals cloaked aliens and marks targets",
+          "shots_per_s_x100": 0,
+          "splash_mt": 0
+        }
+      ]
+    }
+  },
+  "format": 1
+}

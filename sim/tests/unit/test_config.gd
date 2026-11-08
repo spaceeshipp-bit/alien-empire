@@ -1,0 +1,68 @@
+extends "res://sim/tests/test_case.gd"
+
+const SimConfig := preload("res://sim/core/sim_config.gd")
+const BUNDLE := "res://sim/tests/golden/config_bundle.json"
+
+
+func test_loads_the_frozen_bundle() -> bool:
+	var bundle: Dictionary = load_json(BUNDLE)
+	var config := SimConfig.new()
+	expect_true(config.load_bundle(bundle), "bundle loads: %s" % str(config.errors))
+	expect_eq(config.config_hash, String(bundle.get("config_hash", "")), "config hash")
+	var ids: PackedStringArray = config.enemy_ids()
+	expect_true(ids.size() > 0, "aliens loaded")
+	var sorted_ids: Array = Array(ids)
+	sorted_ids.sort()
+	expect_eq(Array(ids), sorted_ids, "ids in sorted order")
+	for i in ids.size():
+		expect_eq(config.enemy(ids[i]).index, i, "index of %s" % ids[i])
+	return true
+
+
+func test_values_match_the_bundle() -> bool:
+	var bundle: Dictionary = load_json(BUNDLE)
+	var config := SimConfig.new()
+	expect_true(config.load_bundle(bundle), "bundle loads")
+	for entry in bundle["data"]["enemies"]["enemies"]:
+		var id: String = String(entry["id"])
+		var enemy_type: SimConfig.EnemyType = config.enemy(id)
+		expect_eq(enemy_type.hp_x100, int(entry["hp_x100"]), "%s hp" % id)
+		expect_eq(enemy_type.shield_x100, int(entry["shield_x100"]), "%s shield" % id)
+		expect_eq(enemy_type.speed_mtps, int(entry["speed_mtps"]), "%s speed" % id)
+		expect_eq(enemy_type.air, String(entry["movement"]) == "air", "%s movement" % id)
+		expect_eq(enemy_type.leak_lives, int(entry["leak_lives"]), "%s leak lives" % id)
+	return true
+
+
+func test_refuses_decimal_values() -> bool:
+	var bundle: Dictionary = load_json(BUNDLE)
+	bundle["data"]["enemies"]["enemies"][0]["speed_mtps"] = 1.5
+	var config := SimConfig.new()
+	expect_true(not config.load_bundle(bundle), "a decimal speed is refused")
+	expect_true(_mentions(config.errors, "whole number"), "error explains why: %s" % str(config.errors))
+	return true
+
+
+func test_refuses_missing_field() -> bool:
+	var bundle: Dictionary = load_json(BUNDLE)
+	var first: Dictionary = bundle["data"]["enemies"]["enemies"][0]
+	first.erase("hp_x100")
+	var config := SimConfig.new()
+	expect_true(not config.load_bundle(bundle), "a missing field is refused")
+	expect_true(_mentions(config.errors, "missing field hp_x100"), "error names the field: %s" % str(config.errors))
+	return true
+
+
+func test_refuses_bad_hash() -> bool:
+	var bundle: Dictionary = load_json(BUNDLE)
+	bundle["config_hash"] = "not-a-hash"
+	var config := SimConfig.new()
+	expect_true(not config.load_bundle(bundle), "a malformed config hash is refused")
+	return true
+
+
+func _mentions(lines: PackedStringArray, text: String) -> bool:
+	for line in lines:
+		if line.contains(text):
+			return true
+	return false

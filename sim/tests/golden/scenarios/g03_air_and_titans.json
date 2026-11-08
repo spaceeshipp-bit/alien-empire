@@ -1,0 +1,102 @@
+{
+  "battle_id": "g03_air_and_titans",
+  "mode": "pve",
+  "seed": 77,
+  "max_ms": 120000,
+  "map": {
+    "lanes": [
+      {
+        "id": "main",
+        "ground": [
+          [
+            4500,
+            0
+          ],
+          [
+            4500,
+            3000
+          ],
+          [
+            1500,
+            5000
+          ],
+          [
+            1500,
+            8000
+          ],
+          [
+            7500,
+            10000
+          ],
+          [
+            7500,
+            13000
+          ],
+          [
+            4500,
+            15500
+          ]
+        ],
+        "air": [
+          [
+            4500,
+            0
+          ],
+          [
+            3000,
+            7000
+          ],
+          [
+            4500,
+            15500
+          ]
+        ]
+      }
+    ]
+  },
+  "waves": [
+    {
+      "start_ms": 0,
+      "groups": [
+        {
+          "enemy": "skimmer",
+          "lane": "main",
+          "count": 12,
+          "offset_ms": 0,
+          "interval_ms": 500,
+          "jitter_ms": 500
+        },
+        {
+          "enemy": "hive_carrier",
+          "lane": "main",
+          "count": 2,
+          "offset_ms": 2000,
+          "interval_ms": 8000,
+          "jitter_ms": 1000
+        }
+      ]
+    },
+    {
+      "start_ms": 20000,
+      "groups": [
+        {
+          "enemy": "swarmer",
+          "lane": "main",
+          "count": 30,
+          "offset_ms": 0,
+          "interval_ms": 150,
+          "jitter_ms": 100
+        },
+        {
+          "enemy": "skimmer",
+          "lane": "main",
+          "count": 6,
+          "offset_ms": 500,
+          "interval_ms": 700,
+          "jitter_ms": 350
+        }
+      ]
+    }
+  ],
+  "commands": []
+}

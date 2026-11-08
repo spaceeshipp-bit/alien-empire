@@ -1,0 +1,208 @@
+{
+  "battle_id": "g04_dense_three_lanes",
+  "mode": "pve",
+  "seed": 4242,
+  "max_ms": 180000,
+  "map": {
+    "lanes": [
+      {
+        "id": "left",
+        "ground": [
+          [
+            1500,
+            0
+          ],
+          [
+            1500,
+            6000
+          ],
+          [
+            3000,
+            9000
+          ],
+          [
+            3000,
+            13000
+          ],
+          [
+            4500,
+            15500
+          ]
+        ],
+        "air": [
+          [
+            1500,
+            0
+          ],
+          [
+            4500,
+            15500
+          ]
+        ]
+      },
+      {
+        "id": "mid",
+        "ground": [
+          [
+            4500,
+            0
+          ],
+          [
+            4500,
+            5000
+          ],
+          [
+            6000,
+            8000
+          ],
+          [
+            4500,
+            11000
+          ],
+          [
+            4500,
+            15500
+          ]
+        ],
+        "air": [
+          [
+            4500,
+            0
+          ],
+          [
+            4500,
+            15500
+          ]
+        ]
+      },
+      {
+        "id": "right",
+        "ground": [
+          [
+            7500,
+            0
+          ],
+          [
+            7500,
+            6000
+          ],
+          [
+            6000,
+            9000
+          ],
+          [
+            6000,
+            13000
+          ],
+          [
+            4500,
+            15500
+          ]
+        ],
+        "air": [
+          [
+            7500,
+            0
+          ],
+          [
+            4500,
+            15500
+          ]
+        ]
+      }
+    ]
+  },
+  "waves": [
+    {
+      "start_ms": 0,
+      "groups": [
+        {
+          "enemy": "swarmer",
+          "lane": "left",
+          "count": 40,
+          "offset_ms": 0,
+          "interval_ms": 100,
+          "jitter_ms": 100
+        },
+        {
+          "enemy": "swarmer",
+          "lane": "mid",
+          "count": 40,
+          "offset_ms": 0,
+          "interval_ms": 100,
+          "jitter_ms": 100
+        },
+        {
+          "enemy": "swarmer",
+          "lane": "right",
+          "count": 20,
+          "offset_ms": 0,
+          "interval_ms": 200,
+          "jitter_ms": 150
+        },
+        {
+          "enemy": "shield_drone",
+          "lane": "mid",
+          "count": 30,
+          "offset_ms": 1000,
+          "interval_ms": 300,
+          "jitter_ms": 200
+        },
+        {
+          "enemy": "phaser",
+          "lane": "right",
+          "count": 30,
+          "offset_ms": 1500,
+          "interval_ms": 300,
+          "jitter_ms": 200
+        }
+      ]
+    },
+    {
+      "start_ms": 15000,
+      "groups": [
+        {
+          "enemy": "carapace_brute",
+          "lane": "left",
+          "count": 15,
+          "offset_ms": 0,
+          "interval_ms": 600,
+          "jitter_ms": 300
+        },
+        {
+          "enemy": "carapace_brute",
+          "lane": "right",
+          "count": 15,
+          "offset_ms": 0,
+          "interval_ms": 600,
+          "jitter_ms": 300
+        },
+        {
+          "enemy": "skimmer",
+          "lane": "mid",
+          "count": 25,
+          "offset_ms": 0,
+          "interval_ms": 200,
+          "jitter_ms": 150
+        },
+        {
+          "enemy": "skimmer",
+          "lane": "left",
+          "count": 25,
+          "offset_ms": 0,
+          "interval_ms": 200,
+          "jitter_ms": 150
+        },
+        {
+          "enemy": "swarmer",
+          "lane": "mid",
+          "count": 60,
+          "offset_ms": 0,
+          "interval_ms": 100,
+          "jitter_ms": 50
+        }
+      ]
+    }
+  ],
+  "commands": []
+}
