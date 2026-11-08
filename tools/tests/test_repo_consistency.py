@@ -115,10 +115,13 @@ def test_fetched_plugins_are_ignored_and_enabled():
     ignored = (REPO / ".gitignore").read_text(encoding="utf-8").splitlines()
     project = (REPO / "client" / "project.godot").read_text(encoding="utf-8")
     enabled = set(re.findall(r'"(res://addons/[^"]+/plugin\.cfg)"', re.search(r"^enabled=.*$", project, re.M).group(0)))
-    tops = {pin["dest"] for pin in plugin_pins() if not any(pin["dest"].startswith(o["dest"] + "/") for o in plugin_pins())}
-    for dest in tops:
-        assert f"/client/{dest}/" in ignored, f"{dest} is fetched, so .gitignore must list /client/{dest}/"
-        assert f"res://{dest}/plugin.cfg" in enabled, f"enable res://{dest}/plugin.cfg in client/project.godot"
+    for pin in plugin_pins():
+        dest = pin["dest"]
+        assert any(f"/client/{dest}/".startswith(line) for line in ignored if line.startswith("/client/") and line.endswith("/")), (
+            f"{dest} is fetched, so .gitignore must cover /client/{dest}/"
+        )
+        if re.fullmatch(r"addons/[^/]+", dest):
+            assert f"res://{dest}/plugin.cfg" in enabled, f"enable res://{dest}/plugin.cfg in client/project.godot"
 
 
 def export_presets() -> dict[str, dict[str, str]]:
@@ -144,3 +147,16 @@ def test_aab_preset_matches_the_apk_preset():
     assert {k: v for k, v in apk_opts.items() if k != "gradle_build/export_format"} == {
         k: v for k, v in aab_opts.items() if k != "gradle_build/export_format"
     }
+
+
+def test_autoloads_use_res_paths():
+    # Fetched addons ship no .uid files, so each machine makes its own uids. The
+    # Play Games addon rewrites its autoload to uid:// on every editor start;
+    # committing that would break the autoload everywhere else.
+    project = (REPO / "client" / "project.godot").read_text(encoding="utf-8")
+    section = re.search(r"^\[autoload\]\n(.*?)(?=^\[|\Z)", project, re.S | re.M)
+    assert section, "client/project.godot has no [autoload] section"
+    entries = re.findall(r'^(\w+)="([^"]*)"$', section.group(1), re.M)
+    assert entries
+    for name, path in entries:
+        assert path.lstrip("*").startswith("res://"), f"autoload {name} must use a res:// path, not {path}"

@@ -18,9 +18,14 @@ cache="${PLUGIN_CACHE:-$repo/build/plugin-cache}"
 # One line per release asset, in install order:
 #   destination in client/ | folder inside the zip ("." for all of it) | SHA-256 | URL
 # The destination is replaced by that folder of the zip. A destination inside
-# an earlier one (AdMob's binaries) must come after it.
+# an earlier one (AdMob's binaries) must come after it. Lines can share a zip
+# (Firebase); it's downloaded once.
 PINS="
 addons/GodotGooglePlayBilling|GodotGooglePlayBilling|20d75623d6f337f08d8283c83098b73678d5f575e39247af5a8eb80588b18568|https://github.com/godot-sdk-integrations/godot-google-play-billing/releases/download/3.3.0/godot-google-play-billing.zip
+addons/GodotPlayGameServices|addons/GodotPlayGameServices|3a1af78f5b9cbf13253b6bffb7795f0c1a9e7d1495052cd456bb6cfb1c265edd|https://github.com/godot-sdk-integrations/godot-play-game-services/releases/download/v3.4.0/addons.zip
+addons/godotx_firebase|godotx_firebase/addons/godotx_firebase|da7273def2ff744efacaab70e2ad863d65a4225ec401f5335de40a19df8170c1|https://github.com/godot-x/firebase/releases/download/3.1.0/godotx_firebase.zip
+android/firebase_core|godotx_firebase/android/firebase_core|da7273def2ff744efacaab70e2ad863d65a4225ec401f5335de40a19df8170c1|https://github.com/godot-x/firebase/releases/download/3.1.0/godotx_firebase.zip
+android/firebase_messaging|godotx_firebase/android/firebase_messaging|da7273def2ff744efacaab70e2ad863d65a4225ec401f5335de40a19df8170c1|https://github.com/godot-x/firebase/releases/download/3.1.0/godotx_firebase.zip
 addons/admob|poing-godot-admob/addons/admob|8c53ff52719edf6a81cc7d32a9cdaad2d9e11693c85faca25008a1c19355726f|https://github.com/poingstudios/godot-admob-plugin/releases/download/v5.1.0/poing-godot-admob-v5.1.0.zip
 addons/admob/android/bin|.|f7fdf644d50c0e231d8f02ae044057e489d0bcafcf50e908a4858477e7ee05ee|https://github.com/poingstudios/godot-admob-plugin/releases/download/v5.1.0/android-template-v4.7.2.zip
 addons/admob/ios/bin|.|6e7f1c807761f9c0ad45d335ac4c74acd4bba7a31f9e1c7cd16a5220010cce71|https://github.com/poingstudios/godot-admob-plugin/releases/download/v5.1.0/ios-template-v4.7.2.zip
@@ -62,7 +67,11 @@ unpack() {
   local file="$1" inner="$2" dest="$3" sha="$4"
   local work
   work="$(mktemp -d)"
-  unzip -q "$file" -d "$work"
+  if [ "$inner" = "." ]; then
+    unzip -q "$file" -d "$work"
+  else
+    unzip -q "$file" "$inner/*" -d "$work"
+  fi
   if [ ! -d "$work/$inner" ]; then
     echo "error: $(basename "$file") has no folder $inner" >&2
     rm -rf "$work"

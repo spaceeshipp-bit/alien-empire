@@ -10,6 +10,7 @@ config_version=5
 
 [aetd]
 
+play_games/project_id=""
 play_integrity/cloud_project_number=""
 
 [application]
@@ -20,6 +21,10 @@ run/main_scene="res://scenes/boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 boot_splash/bg_color=Color(0.0431, 0.0863, 0.149, 1)
 config/icon="res://icon.svg"
+
+[autoload]
+
+GodotPlayGameServices="*res://addons/GodotPlayGameServices/scripts/autoloads/godot_play_game_services.gd"
 
 [debug]
 
@@ -35,7 +40,7 @@ window/handheld/orientation=1
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/GodotGooglePlayBilling/plugin.cfg", "res://addons/PlayIntegrity/plugin.cfg", "res://addons/admob/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotGooglePlayBilling/plugin.cfg", "res://addons/GodotPlayGameServices/plugin.cfg", "res://addons/PlayIntegrity/plugin.cfg", "res://addons/admob/plugin.cfg", "res://addons/firebase_gradle/plugin.cfg", "res://addons/godotx_firebase/plugin.cfg")
 
 [input_devices]
 

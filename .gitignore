@@ -16,7 +16,7 @@
 /client/addons/GodotGooglePlayBilling/
 /client/addons/admob/
 /client/addons/GodotPlayGameServices/
-/client/addons/GodotxFirebase/
+/client/addons/godotx_firebase/
 /client/addons/PlayIntegrity/bin/
 
 # Owner-specific Google files and signing keys never go in the repo
