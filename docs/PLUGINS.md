@@ -26,7 +26,7 @@ No maintained Godot 4 plugin for Play Integrity turned up, so the repo carries a
 
 ### What CI builds
 
-Every push to `m0-foundations`, and every manual run (Actions tab, **CI**, **Run workflow**), builds:
+Every push to `m0-foundations`, and every re-run of a CI run (**Re-run all jobs**), builds:
 
 - `aetd-m0-debug.apk`: the test build you install on the phone.
 - `aetd-m0-release.aab`: the bundle you upload to Play. Only built once the upload key secrets exist (step 2 below).
@@ -35,7 +35,7 @@ The run's summary page shows which key signed the build, its SHA-1 and SHA-256, 
 
 ### The owner's settings
 
-All of them live in the GitHub repo under **Settings > Secrets and variables > Actions**, so you never edit code. Each is optional; a build without one still works, and the matching Lab check tells you it's missing.
+All of them live in the GitHub repo under **Settings > Secrets and variables > Actions**, so you never edit code. The three key secrets go together: a build with only some of them fails, and the run summary (not a Lab check) shows which key signed a build. The other three are each optional; a build without one still works, and the matching Lab check tells you it's missing.
 
 | Name | Kind | What it is | Step |
 | --- | --- | --- | --- |
@@ -50,7 +50,7 @@ All of them live in the GitHub repo under **Settings > Secrets and variables > A
 
 ## Walkthrough for the owner
 
-Do the steps in order. Steps 1 and 2 need no Google accounts beyond the phone's. After each step that changes a setting, start a new build: Actions tab > **CI** > **Run workflow** > branch `m0-foundations`, and install the new APK when it finishes (about 5 minutes).
+Do the steps in order. Steps 1 and 2 need no Google accounts beyond the phone's. After each step that changes a setting, start a new build: on the Actions tab, open the newest **CI** run on `m0-foundations` and tap **Re-run all jobs**. When it finishes (about 5 minutes), check the run's summary: its settings table shows which settings that build got. If the one you just added still says "not set", start a fresh run instead by committing any small change to `m0-foundations` (for example, edit a line of `docs/milestones/M0.md` on github.com). Then install the new APK from that run's artifacts. (GitHub only shows a **Run workflow** button once the workflow is on `main`, which happens when M0 merges.)
 
 ### 1. Install the APK and run the sim tests
 
@@ -59,7 +59,7 @@ Do the steps in order. Steps 1 and 2 need no Google accounts beyond the phone's.
 3. Scroll to **Artifacts** and tap **aetd-m0-debug.apk**. It downloads as an APK.
 4. Open the download and follow the prompts. The first time, Android asks to allow installs from your browser: on that message tap **Settings** and turn on **Allow from this source**, then continue the install. Play Protect may offer to scan an app it hasn't seen before; that's expected, let it scan.
 5. If Android says the app isn't installed because it conflicts with an existing package, uninstall **AETD Plugin Lab** first. Builds signed with different keys can't update each other; this happens once, when you move to your upload key in step 2.
-6. Open **AETD Plugin Lab** and tap **Sim tests**. Every line should be green and the top line should read **ALL CHECKS PASS**. Take a screenshot. This is the "same hash on Android" check of M0.
+6. Open **AETD Plugin Lab** and tap **Sim tests**. After a few seconds the line under **Back** should read **ALL CHECKS PASS**, and the unit-test line and the four g01 to g04 lines should be teal (the first line, with the phone model and versions, is grey). Take a screenshot. This is the "same hash on Android" check of M0.
 7. Back on the home screen, open **Plugin Lab** and run **AdMob rewarded ad**. A Google test ad plays; watch it to the end. The check passes when the SDK grants the reward.
 
 From a computer with the Android platform tools, `adb install -r aetd-m0-debug.apk` works too.
@@ -87,7 +87,7 @@ Billing, Play Games and the Integrity test tools all hang off a Play Console app
 4. **Test and release > Testing > Internal testing > Create new release**. If it asks about the app signing key, keep the Google-generated one: Google signs what it delivers, and you keep only the upload key. Upload the AAB, add a release name, **Save**, **Review release**, **Start rollout to Internal testing**. Play may list setup tasks it wants first; internal testing doesn't need the closed-test requirement that production has.
 5. On the **Testers** tab, create an email list with your Google account and save.
 
-Each new upload needs a higher version code. CI uses its run number, so a newer AAB always works.
+Each new upload needs a higher version code. CI sets it from the run number and the re-run attempt (run 12's second attempt is 1202), so a newer build's AAB always works.
 
 ### 4. Billing
 
@@ -131,7 +131,7 @@ Send screenshots of the **Sim tests** screen and of each Plugin Lab check after 
 
 | Message | Likely cause and fix |
 | --- | --- |
-| "Plugin not installed" or "isn't in this build" | The APK was built without the plugin. Check the CI log's **Check every plugin is in the APK** step. |
+| "Plugin not installed" or "isn't in this build" | Make sure you installed the latest CI APK: CI won't upload an APK that's missing a plugin. If it persists, the plugin's Android side didn't load on this phone; send the check's output. |
 | Billing: "didn't return m0_test_gems" | The product's purchase option isn't **Active** yet, or hasn't propagated, or the phone's main account isn't a license tester. |
 | Billing: `BILLING_UNAVAILABLE` or `DEVELOPER_ERROR` | Read Play's message after the code first. Usually there's no internal-testing release with the billing library yet, or the Play Store app is out of date. |
 | Sign-in: "didn't finish within 3 minutes" | The Google account picker stayed open; run the check again and pick your account. |

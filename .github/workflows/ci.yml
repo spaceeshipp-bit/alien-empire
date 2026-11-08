@@ -59,6 +59,7 @@ jobs:
           name: golden-hashes
           path: ${{ runner.temp }}/golden/expected.json
           if-no-files-found: ignore
+          overwrite: true
       - name: Cache the plugin downloads
         uses: actions/cache@v6
         with:
@@ -134,6 +135,8 @@ jobs:
         with:
           path: build/android/aetd-m0-debug.apk
           archive: false
+          # A re-run uploads again under the same name.
+          overwrite: true
       - name: Export the release AAB for Play
         if: steps.prepare.outputs.signing == 'upload-key'
         run: |
@@ -145,3 +148,5 @@ jobs:
         with:
           path: build/android/aetd-m0-release.aab
           archive: false
+          # A re-run uploads again under the same name.
+          overwrite: true

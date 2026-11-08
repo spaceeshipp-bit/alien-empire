@@ -29,7 +29,9 @@ python3 -m pytest -q tools/tests          # tool tests, reference vectors, repo 
 ```sh
 python3 tools/sync_sim.py
 tools/fetch_plugins.sh                     # pinned Android plugins for the client
+godot --headless --path worker --import
 godot --headless --path worker --script res://cli/run_tests.gd
+godot --headless --path client --import
 godot --headless --path client -- --run-tests-and-quit
 ```
 

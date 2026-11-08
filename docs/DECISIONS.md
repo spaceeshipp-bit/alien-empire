@@ -122,7 +122,7 @@ Every design or technical decision, with its date, the options considered and th
 
 ### D-020 · 2026-11-08 · The owner's upload key signs every CI build
 
-- **Decision:** when the repo has the upload key as Actions secrets, CI signs both the debug APK and a release AAB with it and uploads both; otherwise it signs the APK with a throwaway key and builds no AAB. The version code is the CI run number. `tools/make_upload_key.sh` makes the key (RSA 4096, random password) in a Codespace or on any machine with Java.
+- **Decision:** when the repo has the upload key as Actions secrets, CI signs both the debug APK and a release AAB with it and uploads both; otherwise it signs the APK with a throwaway key and builds no AAB. The version code is the CI run number times 100 plus the re-run attempt, so re-runs get higher codes too. `tools/make_upload_key.sh` makes the key (RSA 4096, random password) in a Codespace or on any machine with Java.
 - **Options:** a throwaway key per run (the M0 start); a separate stable debug key; Play's internal app sharing for debuggable builds.
 - **Reason:** new apps must upload a signed App Bundle ([Play](https://support.google.com/googleplay/android-developer/answer/9859348)), each upload needs a higher version code, and Play Games ties sign-in to the signing key's SHA-1 ([PGS setup](https://developer.android.com/games/pgs/console/setup)). One stable key covers all three and lets each build update the last. A lost upload key can be reset through Play Console ([Play App Signing](https://support.google.com/googleplay/android-developer/answer/9842756)).
 
