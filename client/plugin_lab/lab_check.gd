@@ -23,6 +23,15 @@ func availability() -> String:
 	return ""
 
 
+## Starts a run. The Lab calls this, never run() directly: it clears the result
+## of any earlier run and makes that run's pending timeout harmless.
+func start() -> void:
+	_done = false
+	_run_id += 1
+	run()
+
+
+## The check itself, implemented by each check.
 func run() -> void:
 	finish(false, "not implemented")
 
@@ -40,11 +49,9 @@ func finish(ok: bool, text: String) -> void:
 	finished.emit(ok)
 
 
-## Starts a run: clears the finished flag and fails the run if it hasn't
-## finished within the given time. A timer left over from an earlier run is ignored.
+## Fails the current run if it hasn't finished within the given time. A timer
+## left over from an earlier run is ignored.
 func arm_timeout(seconds: float, message: String) -> void:
-	_done = false
-	_run_id += 1
 	var run_id: int = _run_id
 	get_tree().create_timer(seconds).timeout.connect(func() -> void:
 		if run_id == _run_id:

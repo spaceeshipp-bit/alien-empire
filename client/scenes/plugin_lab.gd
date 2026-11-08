@@ -36,10 +36,14 @@ func _check_card(check: LabCheck) -> Control:
 		output.text = ""
 		status.text = "Running…"
 		status.add_theme_color_override("font_color", Ui.MUTED)
-		check.run()
+		check.start()
 	)
 	card.add_child(run_button)
 	card.add_child(output)
+	# Long values such as the FCM token can't be typed from the screen.
+	card.add_child(Ui.button("Copy this check's output", func() -> void:
+		DisplayServer.clipboard_set(output.text)
+	))
 	check.logged.connect(func(text: String) -> void:
 		output.text += text + "\n"
 	)
