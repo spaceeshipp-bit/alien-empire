@@ -3,6 +3,9 @@ name: CI
 on:
   push:
   pull_request:
+  # "Run workflow" on the Actions tab: rebuild after changing a secret or
+  # variable, without a new commit.
+  workflow_dispatch:
 
 env:
   GODOT_VERSION: "4.7.2"
