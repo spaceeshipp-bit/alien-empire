@@ -1,0 +1,37 @@
+# Godot editor cache (import settings in *.import files ARE committed)
+.godot/
+
+# Copies of /sim made by tools/sync_sim.py at build time
+/client/sim/
+/worker/sim/
+
+# Android build template installed by Godot, plus build outputs
+/client/android/
+/build/
+*.apk
+*.aab
+*.idsig
+
+# Third-party Godot plugins are fetched, not committed (see docs/PLUGINS.md)
+/client/addons/GodotGooglePlayBilling/
+/client/addons/admob/
+/client/addons/GodotPlayGameServices/
+/client/addons/GodotxFirebase/
+/client/addons/PlayIntegrity/bin/
+
+# Owner-specific Google files and signing keys never go in the repo
+google-services.json
+*.keystore
+*.jks
+
+# Gradle and Python caches
+.gradle/
+/client/android_plugins/*/build/
+__pycache__/
+.pytest_cache/
+*.pyc
+/tools/reference/build/
+
+# OS clutter
+.DS_Store
+Thumbs.db
