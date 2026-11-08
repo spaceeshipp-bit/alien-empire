@@ -34,9 +34,29 @@ jobs:
     name: Sim tests, headless and desktop
     runs-on: ubuntu-24.04
     needs: tools
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -r tools/requirements-build.txt
+      - name: Cache godot-cpp and the sim core's Linux build
+        uses: actions/cache@v6
+        with:
+          path: |
+            build/godot-cpp
+            build/scons-cache
+          key: sim-native-linux-${{ hashFiles('tools/build_sim_native.sh', 'sim/native/SConstruct', 'sim/native/build_profile.json') }}
+      - name: Build the sim core for Linux
+        env:
+          SCONS_CACHE: ${{ github.workspace }}/build/scons-cache
+        run: tools/build_sim_native.sh linux
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sim-native-linux
+          path: sim/bin/
+          overwrite: true
       - name: Install Godot
         run: tools/ci/install_godot.sh
       - name: Copy the sim core into the Godot projects
@@ -81,7 +101,7 @@ jobs:
     name: Android test build
     runs-on: ubuntu-24.04
     needs: sim
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -96,6 +116,28 @@ jobs:
           cache-provider: basic
       - name: Install Godot and export templates
         run: tools/ci/install_godot.sh --templates
+      - name: Get the sim core's Linux build, for the editor that exports
+        uses: actions/download-artifact@v8
+        with:
+          name: sim-native-linux
+          path: sim/bin/
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -r tools/requirements-build.txt
+      - name: Install the Android NDK that godot-cpp builds with
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.1.13356709" > /dev/null
+      - name: Cache godot-cpp and the sim core's Android build
+        uses: actions/cache@v6
+        with:
+          path: |
+            build/godot-cpp
+            build/scons-cache
+          key: sim-native-android-${{ hashFiles('tools/build_sim_native.sh', 'sim/native/SConstruct', 'sim/native/build_profile.json') }}
+      - name: Build the sim core for Android
+        env:
+          SCONS_CACHE: ${{ github.workspace }}/build/scons-cache
+        run: tools/build_sim_native.sh android
       - name: Cache the plugin downloads
         uses: actions/cache@v6
         with:

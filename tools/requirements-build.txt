@@ -1,0 +1,2 @@
+# Building the sim core GDExtension (tools/build_sim_native.sh).
+scons==4.11.1

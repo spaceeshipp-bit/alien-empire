@@ -1,0 +1,15 @@
+; The sim core: C++ built from sim/native by tools/build_sim_native.sh into
+; sim/bin/. tools/sync_sim.py copies both into the client and the worker, where
+; they load as res://sim/....
+[configuration]
+
+entry_symbol = "aetd_sim_library_init"
+compatibility_minimum = "4.7"
+reloadable = false
+
+[libraries]
+
+linux.debug.x86_64 = "res://sim/bin/libaetd_sim.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "res://sim/bin/libaetd_sim.linux.template_release.x86_64.so"
+android.debug.arm64 = "res://sim/bin/libaetd_sim.android.template_debug.arm64.so"
+android.release.arm64 = "res://sim/bin/libaetd_sim.android.template_release.arm64.so"

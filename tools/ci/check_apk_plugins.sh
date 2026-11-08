@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Fails unless every Android plugin the Plugin Lab tests is registered in the
-# APK's manifest. Godot drops an enabled plugin it can't find, and the Firebase
-# addon only warns about a missing library, so an export can succeed without
-# them; this catches that before the APK reaches a phone.
+# APK's manifest and the sim core's library is packaged. Godot drops an enabled
+# plugin it can't find, and the Firebase addon only warns about a missing
+# library, so an export can succeed without them; this catches that before the
+# APK reaches a phone.
 #
 #   tools/ci/check_apk_plugins.sh build/android/aetd-m0-debug.apk
 #
@@ -37,7 +38,19 @@ for name in "${expected[@]}"; do
     missing=1
   fi
 done
+# The sim core GDExtension (sim/aetd_sim.gdextension).
+for lib in lib/arm64-v8a/libaetd_sim.android.template_debug.arm64.so lib/arm64-v8a/libaetd_sim.android.template_release.arm64.so; do
+  if unzip -l "$apk" "$lib" > /dev/null 2>&1; then
+    echo "ok       $lib"
+    found_sim=1
+  fi
+done
+if [ -z "${found_sim:-}" ]; then
+  echo "missing  the sim core library (lib/arm64-v8a/libaetd_sim.*.so)" >&2
+  missing=1
+fi
+
 if [ "$missing" -ne 0 ]; then
-  echo "error: $apk lacks plugins the Plugin Lab tests. Check the export log for skipped plugins." >&2
+  echo "error: $apk lacks plugins the Plugin Lab tests or the sim core. Check the export log for skipped plugins." >&2
   exit 1
 fi

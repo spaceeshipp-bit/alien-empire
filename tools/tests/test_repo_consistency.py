@@ -47,6 +47,12 @@ def test_every_res_path_in_sim_exists():
             assert (REPO / res.removeprefix("res://")).exists(), f"{gd.relative_to(REPO)} refers to missing {res}"
 
 
+def native_sim_version() -> int:
+    match = re.search(r"constexpr int64_t SIM_VERSION = (\d+);", (REPO / "sim" / "native" / "src" / "core" / "fx.h").read_text(encoding="utf-8"))
+    assert match, "SIM_VERSION not found in sim/native/src/core/fx.h"
+    return int(match.group(1))
+
+
 def gd_int_constant(gd_file: Path, name: str) -> int:
     match = re.search(rf"const {name}\s*(?::\s*int)?\s*:?=\s*(\d+)", gd_file.read_text(encoding="utf-8"))
     assert match, f"{name} not found in {gd_file.name}"
@@ -58,7 +64,7 @@ def test_golden_hashes_match_the_scenarios_bundle_and_sim_version():
         pytest.skip("expected.json is being re-recorded; the sim job records it and fails")
     expected = ct.load_json(GOLDEN / "expected.json")
     bundle = ct.load_json(GOLDEN / "config_bundle.json")
-    assert expected["sim_version"] == gd_int_constant(REPO / "sim" / "core" / "sim_version.gd", "SIM_VERSION")
+    assert expected["sim_version"] == native_sim_version()
     assert expected["config_hash"] == bundle["config_hash"]
     names = {p.stem for p in (GOLDEN / "scenarios").glob("*.json")}
     assert set(expected["scenarios"]) == names
@@ -167,3 +173,28 @@ def test_autoloads_use_res_paths():
     assert entries
     for name, path in entries:
         assert path.lstrip("*").startswith("res://"), f"autoload {name} must use a res:// path, not {path}"
+
+
+def test_sync_copies_no_native_sources():
+    assert sync_sim.main([]) == 0
+    for target in sync_sim.TARGETS:
+        assert not (target / "native").exists(), f"{target} has a copy of sim/native"
+        assert (target / "aetd_sim.gdextension").exists()
+
+
+def test_native_core_is_integer_only():
+    for source in (REPO / "sim" / "native" / "src" / "core").glob("*"):
+        text = source.read_text(encoding="utf-8")
+        assert not re.search(r"\b(float|double)\b", text), f"{source.name} mentions float or double"
+
+
+def test_gdextension_lists_every_built_library():
+    text = (REPO / "sim" / "aetd_sim.gdextension").read_text(encoding="utf-8")
+    for key, platform, target, arch in [
+        ("linux.debug.x86_64", "linux", "template_debug", "x86_64"),
+        ("linux.release.x86_64", "linux", "template_release", "x86_64"),
+        ("android.debug.arm64", "android", "template_debug", "arm64"),
+        ("android.release.arm64", "android", "template_release", "arm64"),
+    ]:
+        assert f'{key} = "res://sim/bin/libaetd_sim.{platform}.{target}.{arch}.so"' in text, key
+

@@ -3,7 +3,8 @@
 
 The build prompt keeps one shared sim core and copies it into each project at
 build time. The copies are git-ignored; run this after changing anything in
-sim/ and before opening either project in Godot.
+sim/ (or rebuilding sim/bin/ with tools/build_sim_native.sh) and before opening
+either project in Godot.
 
   python3 tools/sync_sim.py          # update both copies
   python3 tools/sync_sim.py --check  # exit 1 if a copy is missing or stale
@@ -21,13 +22,21 @@ TARGETS = (REPO / "client" / "sim", REPO / "worker" / "sim")
 # Files Godot writes next to scripts and assets; never part of the source.
 GENERATED_SUFFIXES = (".uid", ".import")
 SKIPPED_DIRS = {"__pycache__"}
+# The C++ sources of the sim core stay in sim/native; the projects get only the
+# libraries built from them (sim/bin/) and sim/aetd_sim.gdextension.
+SKIPPED_TOP = {"native"}
 
 
 def source_files() -> dict[Path, Path]:
     files = {}
     for path in sorted(SOURCE.rglob("*")):
         rel = path.relative_to(SOURCE)
-        if path.is_file() and not SKIPPED_DIRS.intersection(rel.parts) and not path.name.endswith(GENERATED_SUFFIXES):
+        if (
+            path.is_file()
+            and rel.parts[0] not in SKIPPED_TOP
+            and not SKIPPED_DIRS.intersection(rel.parts)
+            and not path.name.endswith(GENERATED_SUFFIXES)
+        ):
             files[rel] = path
     return files
 
