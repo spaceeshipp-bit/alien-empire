@@ -44,7 +44,8 @@ build() {
 for platform in "$@"; do
   case "$platform" in
     linux)
-      build platform=linux arch=x86_64 target=template_debug
+      # Symbols only in the debug build, which never ships, for readable crash backtraces.
+      build platform=linux arch=x86_64 target=template_debug debug_symbols=yes
       build platform=linux arch=x86_64 target=template_release
       ;;
     android)
