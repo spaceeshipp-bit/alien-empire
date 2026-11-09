@@ -1,6 +1,6 @@
 # Sim worker
 
-Headless Godot project that runs the shared sim core with no rendering. Run `python3 tools/sync_sim.py` first so `worker/sim/` exists.
+Headless Godot project that runs the shared sim core with no rendering. Build the core first (`tools/build_sim_native.sh linux`, see `sim/README.md`), then run `python3 tools/sync_sim.py` so `worker/sim/` exists.
 
 ```sh
 # unit tests and golden battles; exit code 0 only if all pass
