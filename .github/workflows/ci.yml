@@ -61,6 +61,12 @@ jobs:
         run: tools/ci/install_godot.sh
       - name: Copy the sim core into the Godot projects
         run: python3 tools/sync_sim.py
+      - name: Diagnose the first import under gdb
+        run: |
+          sudo apt-get install -y -q gdb > /dev/null 2>&1
+          cp -r worker "$RUNNER_TEMP/worker-fresh"
+          timeout 300 gdb -batch -nx -ex "set pagination off" -ex "handle SIGABRT stop" -ex run -ex "bt 80" -ex "info threads" --args godot --headless --path "$RUNNER_TEMP/worker-fresh" --import 2>&1 | grep -v "update_scripts_classes\|New Thread\|exited\]" | tail -150
+          exit 1
       - name: Import the worker project
         run: tools/ci/run_godot.sh 300 godot --headless --path worker --import
       - name: Unit and golden tests on the headless worker
