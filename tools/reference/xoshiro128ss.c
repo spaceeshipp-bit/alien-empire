@@ -1,8 +1,8 @@
 /*
- * Independent C reference for sim/core/sim_rng.gd: xoshiro128** (the public
- * domain generator by David Blackman and Sebastiano Vigna), seeded through
- * splitmix32 exactly as the sim seeds it. Native uint32_t arithmetic wraps on
- * its own, so this checks the overflow-free GDScript and Python versions.
+ * Independent C reference for the sim's generator (sim/native/src/core/sim_rng.cpp):
+ * xoshiro128** (the public domain generator by David Blackman and Sebastiano
+ * Vigna), seeded through splitmix32 exactly as the sim seeds it. Written apart
+ * from the sim's C++, and checked against the Python version in gen_vectors.py.
  *
  * Build and run (tools/tests/test_vectors.py does this when a C compiler exists):
  *   cc -O2 -o xoshiro128ss tools/reference/xoshiro128ss.c
