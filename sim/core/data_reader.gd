@@ -7,8 +7,9 @@ extends RefCounted
 ## while converting parsed JSON to int before a battle starts; the sim itself
 ## never sees one.
 
-## Largest integer a float holds exactly: 2^53 - 1.
-const MAX_JSON_INT: float = 9007199254740991.0
+## Largest integer a float holds exactly: 2^53 - 1. Written as an int: Godot
+## 4.7.2 reads the float literal 9007199254740991.0 as 9007199254740990.0.
+const MAX_JSON_INT: float = 9007199254740991
 
 var errors: PackedStringArray = PackedStringArray()
 
