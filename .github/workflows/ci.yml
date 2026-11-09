@@ -62,18 +62,18 @@ jobs:
       - name: Copy the sim core into the Godot projects
         run: python3 tools/sync_sim.py
       - name: Import the worker project
-        run: timeout 300 godot --headless --path worker --import
+        run: tools/ci/run_godot.sh 300 godot --headless --path worker --import
       - name: Unit and golden tests on the headless worker
         run: |
           if [ ! -f sim/tests/golden/expected.json ]; then
             # Only after a deliberate re-record (a SIM_VERSION bump): record on
             # this runner for review, upload them, and fail.
             mkdir -p "$RUNNER_TEMP/golden"
-            timeout 600 godot --headless --path worker --script res://cli/run_tests.gd -- --record "$RUNNER_TEMP/golden/expected.json" || true
+            tools/ci/run_godot.sh 600 godot --headless --path worker --script res://cli/run_tests.gd -- --record "$RUNNER_TEMP/golden/expected.json" || true
             echo "::error::sim/tests/golden/expected.json is missing. Hashes recorded on this runner are in the golden-hashes artifact: review them and commit the file."
             exit 1
           fi
-          timeout 600 godot --headless --path worker --script res://cli/run_tests.gd
+          tools/ci/run_godot.sh 600 godot --headless --path worker --script res://cli/run_tests.gd
       - name: Upload newly recorded golden hashes
         if: failure()
         uses: actions/upload-artifact@v7
@@ -90,12 +90,12 @@ jobs:
       - name: Fetch the third-party Android plugins
         run: tools/fetch_plugins.sh
       - name: Import the client project
-        run: timeout 300 godot --headless --path client --import
+        run: tools/ci/run_godot.sh 300 godot --headless --path client --import
       - name: Unit and golden tests on the desktop client
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q xvfb libgl1-mesa-dri
-          timeout 600 xvfb-run -a godot --path client --rendering-driver opengl3 -- --run-tests-and-quit
+          xvfb-run -a tools/ci/run_godot.sh 600 godot --path client --rendering-driver opengl3 -- --run-tests-and-quit
 
   android:
     name: Android test build
