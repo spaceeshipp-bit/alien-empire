@@ -27,11 +27,31 @@ bool coords_ok(const LanePath &path) {
 
 } // namespace
 
+void Battle::reset() {
+	tick = 0;
+	outcome = RUNNING;
+	aliens.clear();
+	spawned_count = 0;
+	leaked_count = 0;
+	leaked_lives = 0;
+	checkpoints.clear();
+	errors.clear();
+	entity_updates = 0;
+	config_ = BattleConfig();
+	spec_ = BattleSpec();
+	rng_ = SimRng();
+	next_id_ = 1;
+	spawn_keys_.clear();
+	spawn_group_.clear();
+	spawn_cursor_ = 0;
+	ready_ = false;
+}
+
 bool Battle::setup(BattleConfig config, BattleSpec spec) {
+	// Aliens point into spec_'s lanes, so they go before the lanes are replaced.
+	reset();
 	config_ = std::move(config);
 	spec_ = std::move(spec);
-	errors.clear();
-	ready_ = false;
 	if (!in_range(spec_.seed, 0, SimRng::MAX_SEED)) {
 		errors.push_back("seed out of range");
 	}
@@ -79,15 +99,6 @@ bool Battle::setup(BattleConfig config, BattleSpec spec) {
 	if (!errors.empty()) {
 		return false;
 	}
-	tick = 0;
-	outcome = RUNNING;
-	aliens.clear();
-	spawned_count = 0;
-	leaked_count = 0;
-	leaked_lives = 0;
-	checkpoints.clear();
-	entity_updates = 0;
-	next_id_ = 1;
 	rng_.set_seed(spec_.seed);
 	build_spawn_plan();
 	ready_ = true;

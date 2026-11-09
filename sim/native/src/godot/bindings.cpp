@@ -279,6 +279,7 @@ bool SimNativeBattle::setup(const Dictionary &config, const Dictionary &spec) {
 		s.groups.push_back(g);
 	}
 	if (!errors.empty()) {
+		battle.reset();
 		battle.errors = errors;
 		ready = false;
 		return false;

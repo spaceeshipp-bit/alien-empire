@@ -33,6 +33,15 @@ std::vector<int64_t> read_ints(std::istringstream &in, int64_t count) {
 	return out;
 }
 
+void print_result(const Battle &battle) {
+	static const char *names[] = { "running", "cleared", "timed_out" };
+	std::cout << "result " << names[battle.outcome] << " " << battle.tick << " " << battle.state_hash();
+	for (const auto &c : battle.checkpoints) {
+		std::cout << " " << c;
+	}
+	std::cout << "\n";
+}
+
 } // namespace
 
 int main() {
@@ -126,12 +135,29 @@ int main() {
 				continue;
 			}
 			battle.run();
-			static const char *names[] = { "running", "cleared", "timed_out" };
-			std::cout << "result " << names[battle.outcome] << " " << battle.tick << " " << battle.state_hash();
-			for (const auto &c : battle.checkpoints) {
-				std::cout << " " << c;
+			print_result(battle);
+		} else if (cmd == "battle_reuse") {
+			// One Battle set up three times: the valid battle run partway, a spec
+			// the core rejects, then the valid battle again. The rejected setup
+			// must leave nothing behind (aliens point into the replaced lanes),
+			// and the rerun must match a fresh battle.
+			Battle battle;
+			if (!battle.setup(config, spec)) {
+				std::cout << "error\n" << "error\n";
+				continue;
 			}
-			std::cout << "\n";
+			while (battle.outcome == RUNNING && (battle.tick < 50 || battle.aliens.empty())) {
+				battle.advance();
+			}
+			const bool had_aliens = !battle.aliens.empty();
+			BattleSpec rejected = spec;
+			rejected.max_ticks = 0;
+			const bool accepted = battle.setup(config, rejected);
+			std::cout << (had_aliens ? "" : "no aliens to test with ") << "rejected " << (accepted ? "no" : "yes")
+					  << " aliens " << battle.aliens.size() << " tick " << battle.tick << "\n";
+			battle.setup(config, spec);
+			battle.run();
+			print_result(battle);
 		} else if (!cmd.empty()) {
 			std::cerr << "unknown command: " << cmd << "\n";
 			return 2;

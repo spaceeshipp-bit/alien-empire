@@ -65,9 +65,11 @@ class Plan:
     def send(self, line: str) -> None:
         self.lines.append(line)
 
-    def ask(self, line: str, what: str, expected: str) -> None:
+    def ask(self, line: str, what: str, expected: str, *more: tuple[str, str]) -> None:
+        """Sends line; expects one output line, plus one per (what, expected) in more."""
         self.lines.append(line)
         self.expect.append((what, expected))
+        self.expect.extend(more)
 
 
 def add_vectors(plan: Plan) -> None:
@@ -139,6 +141,10 @@ def add_goldens(plan: Plan) -> int:
         want = expected[name]
         line = " ".join(["result", want["outcome"], str(want["ticks"]), want["final_hash"], *want["checkpoints"]])
         plan.ask("battle_run", f"golden {name}", line)
+        plan.ask(
+            "battle_reuse", f"golden {name}: a rejected setup leaves nothing behind", "rejected yes aliens 0 tick 0",
+            (f"golden {name}: rerun on the same battle", line),
+        )
         count += 1
     return count
 

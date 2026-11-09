@@ -91,8 +91,11 @@ public:
 	Battle(const Battle &) = delete;
 	Battle &operator=(const Battle &) = delete;
 
-	// Prepares the battle. Returns false and fills errors if the inputs are unusable.
+	// Prepares the battle, forgetting any earlier one. Returns false and fills
+	// errors if the inputs are unusable; the battle is then empty.
 	bool setup(BattleConfig config, BattleSpec spec);
+	// Forgets any earlier battle: no aliens, no inputs, not ready to run.
+	void reset();
 	// Runs one 50 ms tick.
 	void advance();
 	// Runs to the end.
