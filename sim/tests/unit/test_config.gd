@@ -1,6 +1,7 @@
 extends "res://sim/tests/test_case.gd"
 
 const SimConfig := preload("res://sim/core/sim_config.gd")
+const DataReader := preload("res://sim/core/data_reader.gd")
 const BUNDLE := "res://sim/tests/golden/config_bundle.json"
 
 
@@ -40,6 +41,18 @@ func test_refuses_decimal_values() -> bool:
 	var config := SimConfig.new()
 	expect_true(not config.load_bundle(bundle), "a decimal speed is refused")
 	expect_true(_mentions(config.errors, "whole number"), "error explains why: %s" % str(config.errors))
+	return true
+
+
+## Seeds go up to 2^53 - 1 (battle.schema.json), and Godot's JSON parser hands
+## them over as floats.
+func test_reads_the_largest_exact_json_int() -> bool:
+	var values: Array = JSON.parse_string("[9007199254740991, 9007199254740992]")
+	var reader := DataReader.new()
+	expect_eq(reader.to_int(values[0], "largest"), 9007199254740991, "2^53 - 1 is read exactly")
+	expect_eq(reader.errors.size(), 0, "no error for 2^53 - 1")
+	reader.to_int(values[1], "too_big")
+	expect_eq(reader.errors.size(), 1, "2^53 is refused: past it, a float can't hold every whole number")
 	return true
 
 
