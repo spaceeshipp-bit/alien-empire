@@ -51,12 +51,41 @@ def target_files(target: Path) -> set[Path]:
     }
 
 
+# Godot loads the extensions listed in <project>/.godot/extension_list.cfg at
+# startup. Its first scan of a fresh project adds new ones and loads them mid-run,
+# and Godot 4.7.2 then crashes on exit (seen in CI: a segfault in Godot's own
+# shutdown). Listing the sim core before Godot first opens a project makes it
+# load at startup, as it does on every later run.
+EXTENSION = "res://sim/aetd_sim.gdextension"
+
+
+def extension_list(target: Path) -> Path:
+    return target.parent / ".godot" / "extension_list.cfg"
+
+
+def extension_listed(target: Path) -> bool:
+    config = extension_list(target)
+    return config.exists() and EXTENSION in {line.strip() for line in config.read_text(encoding="utf-8").splitlines()}
+
+
+def list_extension(target: Path) -> bool:
+    if extension_listed(target):
+        return False
+    config = extension_list(target)
+    lines = config.read_text(encoding="utf-8").splitlines() if config.exists() else []
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text("\n".join([*[line for line in lines if line.strip()], EXTENSION]) + "\n", encoding="utf-8")
+    return True
+
+
 def differences(target: Path) -> list[str]:
     wanted = source_files()
     present = target_files(target)
     problems = [f"missing {rel}" for rel in wanted if rel not in present]
     problems += [f"stale {rel}" for rel, src in wanted.items() if rel in present and (target / rel).read_bytes() != src.read_bytes()]
     problems += [f"extra {rel}" for rel in sorted(present - set(wanted))]
+    if not extension_listed(target):
+        problems.append(f"{EXTENSION} is not in {extension_list(target).relative_to(REPO)}")
     return problems
 
 
@@ -72,6 +101,8 @@ def sync(target: Path) -> int:
         changed += 1
     for rel in sorted(target_files(target) - set(wanted)):
         (target / rel).unlink()
+        changed += 1
+    if list_extension(target):
         changed += 1
     return changed
 

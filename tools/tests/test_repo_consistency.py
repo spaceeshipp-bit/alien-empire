@@ -180,6 +180,8 @@ def test_sync_copies_no_native_sources():
     for target in sync_sim.TARGETS:
         assert not (target / "native").exists(), f"{target} has a copy of sim/native"
         assert (target / "aetd_sim.gdextension").exists()
+        listed = (target.parent / ".godot" / "extension_list.cfg").read_text(encoding="utf-8").split()
+        assert "res://sim/aetd_sim.gdextension" in listed
 
 
 def test_native_core_is_integer_only():
