@@ -184,6 +184,19 @@ def test_sync_copies_no_native_sources():
         assert "res://sim/aetd_sim.gdextension" in listed
 
 
+def test_sync_replaces_files_without_touching_the_old_one(tmp_path):
+    src = tmp_path / "new.so"
+    src.write_bytes(b"new library")
+    dst = tmp_path / "bin" / "lib.so"
+    dst.parent.mkdir()
+    dst.write_bytes(b"old library")
+    with dst.open("rb") as loaded:  # stands in for Godot's mapping of the library
+        sync_sim.replace_file(src, dst)
+        assert loaded.read() == b"old library"
+    assert dst.read_bytes() == b"new library"
+    assert sorted(p.name for p in dst.parent.iterdir()) == ["lib.so"]
+
+
 def test_native_core_is_integer_only():
     for source in (REPO / "sim" / "native" / "src" / "core").glob("*"):
         text = source.read_text(encoding="utf-8")

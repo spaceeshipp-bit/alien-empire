@@ -12,6 +12,7 @@ either project in Godot.
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -89,6 +90,15 @@ def differences(target: Path) -> list[str]:
     return problems
 
 
+def replace_file(src: Path, dst: Path) -> None:
+    """Copies src to dst through a new file renamed into place. A Godot editor or
+    worker that has the old sim library loaded keeps its own copy mapped;
+    rewriting that file in place would change code under the running process."""
+    temp = dst.with_name(f".{dst.name}.sync-tmp")
+    shutil.copyfile(src, temp)
+    os.replace(temp, dst)
+
+
 def sync(target: Path) -> int:
     wanted = source_files()
     changed = 0
@@ -97,7 +107,7 @@ def sync(target: Path) -> int:
         if dst.exists() and dst.read_bytes() == src.read_bytes():
             continue
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(src, dst)
+        replace_file(src, dst)
         changed += 1
     for rel in sorted(target_files(target) - set(wanted)):
         (target / rel).unlink()
