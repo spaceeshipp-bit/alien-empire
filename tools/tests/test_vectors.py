@@ -1,5 +1,4 @@
-"""Checks the reference implementations behind the GDScript test vectors."""
-import random
+"""Checks the reference implementations behind the sim's test vectors."""
 import shutil
 import subprocess
 from pathlib import Path
@@ -13,16 +12,6 @@ C_SOURCE = Path(gv.__file__).resolve().parent / "reference" / "xoshiro128ss.c"
 
 def test_vector_files_are_current():
     assert gv.main(["--check"]) == 0
-
-
-def test_split_mul32_matches_exact_product():
-    pick = random.Random(7)
-    pairs = [(gv.MASK32, gv.MASK32), (0, gv.MASK32), (0xFFFF, 0xFFFF0000)]
-    pairs += [(pick.getrandbits(32), pick.getrandbits(32)) for _ in range(20000)]
-    for a, b in pairs:
-        assert gv.mul32_split(a, b) == (a * b) & gv.MASK32
-        # the largest intermediate in the GDScript version stays far below 2^63
-        assert a * (b & 0xFFFF) < 2**48 and a * (b >> 16) < 2**48
 
 
 def test_range_int_stays_in_bounds_and_covers_span():

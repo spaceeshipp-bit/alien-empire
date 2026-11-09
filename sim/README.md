@@ -2,7 +2,7 @@
 
 The one battle simulation. The phone runs it to play battles, and the server's worker runs the same code to replay and verify them, so a given seed, config and command log give the same result everywhere. Never re-implement battle logic anywhere else.
 
-The battle itself is C++ (`native/`), built into a GDExtension that the client and the worker both load (docs/DECISIONS.md D-026: GDScript was 3.5 to 24 times too slow for a 180-second raid replay in 100 ms). The GDScript in `core/` reads and checks configs and battle specs and wraps the C++ with the API the rest of the game uses.
+The battle itself is C++ (`native/`), built into a GDExtension that the client and the worker both load (docs/DECISIONS.md D-026: on a raid benchmark GDScript missed the 100 ms replay budget by 2 to 25 times, and got under it only after a rebuild for speed, and only while no unit died). The GDScript in `core/` reads and checks configs and battle specs and wraps the C++ with the API the rest of the game uses.
 
 ## Rules
 

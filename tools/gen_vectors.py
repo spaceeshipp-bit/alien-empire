@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Reference implementations of the sim's integer primitives, and the test
-vectors the GDScript unit tests check on desktop, Android and headless.
+vectors the sim core is checked against: alone by tools/check_sim_native.py, and
+through the GDScript unit tests on desktop, Android and headless.
 
   python3 tools/gen_vectors.py          # rewrite sim/tests/vectors/*.json
   python3 tools/gen_vectors.py --check  # exit 1 if the files are out of date
 
-The RNG here must match sim/core/sim_rng.gd exactly (xoshiro128** seeded by
-splitmix32). tools/reference/xoshiro128ss.c is a second, independent reference
+The RNG here must match sim/native/src/core/sim_rng.cpp exactly (xoshiro128**
+seeded by splitmix32). tools/reference/xoshiro128ss.c is a second, independent reference
 in C that the pytest suite compares against this one.
 """
 from __future__ import annotations
@@ -30,19 +31,12 @@ def mul32(a: int, b: int) -> int:
     return (a * b) & MASK32
 
 
-def mul32_split(a: int, b: int) -> int:
-    """The overflow-free form sim_rng.gd uses: no product exceeds 2^48."""
-    low = (a * (b & 0xFFFF)) & MASK32
-    high = ((a * (b >> 16)) & 0xFFFF) << 16
-    return (low + high) & MASK32
-
-
 def rotl(x: int, k: int) -> int:
     return ((x << k) | (x >> (32 - k))) & MASK32
 
 
 class Rng:
-    """Python twin of sim/core/sim_rng.gd."""
+    """Python twin of sim/native/src/core/sim_rng.cpp."""
 
     def __init__(self, seed: int) -> None:
         if not 0 <= seed <= MAX_SEED:
@@ -137,7 +131,7 @@ def isqrt_vectors() -> dict:
 
 
 def hash_bytes(ops: list) -> bytes:
-    """The byte stream sim/core/state_hasher.gd feeds to SHA-256."""
+    """The byte stream sim/native/src/core/state_hasher.h feeds to SHA-256."""
     out = bytearray()
     for op, value in ops:
         if op == "int":

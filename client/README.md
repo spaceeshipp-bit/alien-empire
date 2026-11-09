@@ -4,7 +4,7 @@ The phone app. In M0 it's a test build with two screens: **Sim tests** (unit tes
 
 ## Open it
 
-1. From the repo root, build the sim core for your desktop (`tools/build_sim_native.sh linux`; see `sim/README.md`), then run `python3 tools/sync_sim.py`. It copies `sim/` with the built library to `client/sim/`; the copy is git-ignored. CI builds the core for Linux and Android only, so opening the project on Windows or macOS needs a build for that platform first.
+1. From the repo root, build the sim core for your desktop (`tools/build_sim_native.sh linux`; see `sim/README.md`), then run `python3 tools/sync_sim.py`. It copies `sim/` with the built library to `client/sim/`; the copy is git-ignored. CI builds the core for Linux and Android only, so opening the project on Windows or macOS needs `tools/build_sim_native.sh` and `sim/aetd_sim.gdextension` extended to that platform first.
 2. Run `tools/fetch_plugins.sh`. It downloads the pinned third-party Android plugins into `client/addons/` and checks their hashes. Run it before opening the editor: otherwise Godot drops the missing plugins from `project.godot`, and the AdMob addon downloads its binaries itself without a hash check.
 3. Open `client/project.godot` in Godot 4.7.2.
 4. Press Play. On desktop the Plugin Lab checks report that they need Android.
