@@ -53,7 +53,7 @@ func _row_text(row: Dictionary) -> String:
 	var updates: int = row["entity_updates"]
 	var speed: String = "-"
 	if updates > 0:
-		speed = "%.2f us per alien-tick" % (float(usec) / updates)
+		speed = "%d ns per alien-tick" % roundi(1000.0 * usec / updates)
 	return "%-24s %-9s ticks=%-5d %8.1f ms  %s  %s  %s" % [
 		row["name"], row["status"], row["ticks"], usec / 1000.0, speed,
 		String(row["hash"]).substr(0, 16), row["detail"],
