@@ -156,6 +156,27 @@ Every design or technical decision, with its date, the options considered and th
 - **Options:** ignore the generated files.
 - **Reason:** Godot 4.7's [version control guide](https://docs.godotengine.org/en/4.7/tutorials/best_practices/version_control_systems.html) ignores only `.godot/` and `*.translation`. The Play Games addon rewrites its autoload to a `uid://` value on every editor start, and fetched addons get different uids on each machine, so a committed `uid://` autoload would break everywhere else.
 
+### D-026 · 2026-11-09 · The battle sim runs as C++ in a GDExtension
+
+- **Decision:** the battle simulation is C++20 in `sim/native/`, built into one GDExtension library that the phone, the desktop client and the server's worker all load. GDScript keeps everything around it: reading and checking configs and battle specs, the API the rest of the game calls (`sim/core/*.gd`) and the tests. The determinism rules are unchanged (integers only, the battle's own seeded generator, ascending-ID order), and the C++ is built with `-fwrapv` so integer overflow behaves the same on every compiler. The core uses only the C++ standard library, so CI also compiles it on its own under UndefinedBehaviorSanitizer and AddressSanitizer and checks it against the reference vectors and golden hashes (`tools/check_sim_native.py`). The generator (D-005) and the state hash (D-006, now our own SHA-256 instead of Godot's `HashingContext`) moved with it and give the same answers. godot-cpp (MIT, Godot Engine contributors) is pinned to 10.0.0-stable by commit. The 100 ms raid-replay target stays. This answers Q7, which the owner left to the builder on 2026-11-09.
+- **Options:** keep pure GDScript and relax the target to about 2.5 s per raid; keep pure GDScript and optimize it; a separate native sim on the server with GDScript on the phone, which would be two implementations that must agree bit for bit (the build prompt rules that out).
+- **Reason:** measured before deciding. A raid kernel with the hot paths a full raid will have (lane movement, a spatial grid, nearest-enemy targeting re-picked every 5 ticks, counters, shields, armor and splash) ran 180 seconds of battle, 3,600 ticks, on one x86-64 core of the build workspace:
+
+  | Raid size | GDScript, release runtime | GDScript, editor runtime | C++ (-O2) |
+  | --- | --- | --- | --- |
+  | 70 units and towers | 345 to 360 ms | 479 ms | 9 to 12 ms |
+  | 303 units and towers | 2,360 to 2,470 ms | 3,010 ms | 65 to 82 ms |
+
+  Both versions fired exactly the same shots, so they did the same work. GDScript missed the budget by 3.5 to 24 times; C++ meets it with room for the rules M1 and M2 add. The phone gains too: it runs the same battle live, and a fast sim leaves the frame time for drawing. On the golden battles the switch took the desktop client from 1.1 to 25.3 ms per battle down to 0.4 ms or less, with identical hashes.
+- **Costs:** the library must be built for each platform. CI builds Linux x86-64 and Android arm64; opening the project on Windows or macOS needs a local build first. CI needs a C++ toolchain, SCons and the Android NDK (28.1.13356709, the one godot-cpp builds with). A GDExtension built for Godot 4.7 should keep working in later 4.x releases but not earlier ones ([About godot-cpp](https://docs.godotengine.org/en/4.7/tutorials/scripting/cpp/about_godot_cpp.html)), so a Godot upgrade doesn't force a rebuild, but godot-cpp should be upgraded with it. godot-cpp's MIT notice goes in the game's credits next to Godot's.
+- **Build prompt:** its Sim core line says "pure GDScript battle logic". The proposed wording for the owner's doc: "Sim core: deterministic battle logic in C++, built as a Godot GDExtension, with a thin GDScript layer; no engine physics, no rendering and no floating-point math. The same library runs on the phone and on the server." `docs/BUILD_PROMPT.md` is updated when the doc is.
+
+### D-027 · 2026-11-09 · The sim library is registered before Godot first opens a project
+
+- **Decision:** `tools/sync_sim.py` also writes `res://sim/aetd_sim.gdextension` into each project's `.godot/extension_list.cfg`, so Godot loads the sim library at startup.
+- **Options:** let Godot discover the extension while it imports.
+- **Reason:** in CI, Godot 4.7.2 crashed on exit (signal 6, then a segfault in its own shutdown under gdb) whenever it found the extension during a project's first import. A second run of the same command passed, and so does every run with the extension listed up front.
+
 ## Open questions for the owner
 
 | # | Question | Current default | Needed by |
@@ -166,5 +187,4 @@ Every design or technical decision, with its date, the options considered and th
 | Q4 | Field tower range: +5% of base per level, or compounding? Sell refund: 70% of everything spent, or of the build cost? | Base, everything spent | M2 |
 | Q5 | How long does the Ion Disruptor's slow last, and does the Sensor Beacon mark while in range or per hit? | Not set | M2 |
 | Q6 | The game's package name (needs the title). | Test app uses `com.alienempiretd.pluginlab` | First Play upload of the game |
-| Q7 | The build prompt's speed target, a 180-second raid replayed in under 100 ms on one core, looks tight for pure GDScript once combat is in (see M0 open issues). Keep the target and the pure-GDScript rule, relax the target, or move the sim core to a GDExtension? | Keep both until combat exists to measure | Before M2 |
 | Q8 | CI's Gradle cache: keep the MIT-licensed basic cache, or accept Gradle's terms for the enhanced one (D-023)? | Basic | Any time |

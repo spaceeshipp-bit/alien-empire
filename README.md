@@ -9,7 +9,7 @@ A fair-to-play alien tower defense game for Android: PvE tower defense, async Pv
 | Folder | What's in it |
 | --- | --- |
 | `client/` | Godot 4.7.2 phone app. In M0, a test build: on-device sim tests and the Plugin Lab |
-| `sim/` | The shared, deterministic battle sim (pure GDScript, integer math) and its tests. Copied into `client/` and `worker/` by `tools/sync_sim.py` |
+| `sim/` | The shared, deterministic battle sim (a C++ core with GDScript wrappers, integer math) and its tests. Copied into `client/` and `worker/` by `tools/sync_sim.py` |
 | `worker/` | Headless Godot project that runs the sim: tests now, server-side battle replays from M4 |
 | `server/` | Nakama backend modules (M4) |
 | `config/` | Every balance number, as JSON checked against a schema |
@@ -26,7 +26,12 @@ python3 -m pytest -q tools/tests          # tool tests, reference vectors, repo 
 
 ## Sim tests (Godot 4.7.2)
 
+The battle sim is C++ (`sim/native`), built into a GDExtension both Godot projects load.
+
 ```sh
+python3 tools/check_sim_native.py          # the C++ core alone, under sanitizers
+pip install -r tools/requirements-build.txt
+tools/build_sim_native.sh linux            # builds sim/bin/ (fetches the pinned godot-cpp)
 python3 tools/sync_sim.py
 tools/fetch_plugins.sh                     # pinned Android plugins for the client
 godot --headless --path worker --import
