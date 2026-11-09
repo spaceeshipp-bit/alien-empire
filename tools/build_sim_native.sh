@@ -8,7 +8,7 @@
 #
 # tools/check_sim_native.py checks the same core without Godot, under sanitizers.
 #
-# Needs SCons (tools/requirements-build.txt), a C++20 compiler, and for Android the NDK
+# Needs SCons (tools/requirements-build.txt), a C++17 compiler, and for Android the NDK
 # version godot-cpp asks for (28.1.13356709) under $ANDROID_HOME/ndk/. Then run
 # tools/sync_sim.py to copy sim/ (with sim/bin/) into the Godot projects.
 set -euo pipefail

@@ -11,7 +11,7 @@ battle_spec.gd read them.
 The same core then runs inside Godot through the GDExtension, where the
 GDScript tests check it again on the desktop, the worker and the phone.
 
-  python3 tools/check_sim_native.py          # needs g++ or clang++ with C++20
+  python3 tools/check_sim_native.py          # needs g++ or clang++ with C++17
 """
 from __future__ import annotations
 
@@ -29,8 +29,10 @@ DRIVER = REPO / "sim" / "native" / "tests" / "core_check.cpp"
 VECTORS = REPO / "sim" / "tests" / "vectors"
 GOLDEN = REPO / "sim" / "tests" / "golden"
 OUT = REPO / "build" / "sim-native-check"
+# The language mode the library ships in: godot-cpp 10 compiles with -std=c++17
+# and -fno-exceptions, and sim/native/SConstruct adds -fwrapv.
 FLAGS = [
-    "-std=c++20", "-O1", "-g", "-fwrapv", "-Wall", "-Wextra", "-Werror",
+    "-std=c++17", "-fno-exceptions", "-fwrapv", "-O1", "-g", "-Wall", "-Wextra", "-Werror",
     "-fsanitize=undefined,address", "-fno-sanitize-recover=all",
 ]
 
@@ -107,8 +109,14 @@ def ticks(ms: int) -> int:
 
 
 def add_goldens(plan: Plan) -> int:
+    expected_path = GOLDEN / "expected.json"
+    if not expected_path.exists():
+        # Deleted on purpose to re-record after a SIM_VERSION bump (D-008): the
+        # vectors still run here, and CI's sim job records the fresh hashes.
+        print(f"note: {expected_path.relative_to(REPO)} is missing, so no golden battles run")
+        return 0
     bundle = load(GOLDEN / "config_bundle.json")
-    expected = load(GOLDEN / "expected.json")["scenarios"]
+    expected = load(expected_path)["scenarios"]
     enemies = sorted(bundle["data"]["enemies"]["enemies"], key=lambda e: e["id"])
     index = {e["id"]: i for i, e in enumerate(enemies)}
     count = 0
