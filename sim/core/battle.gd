@@ -58,6 +58,8 @@ var _native := SimNativeBattle.new()
 ## Prepares the battle. Returns false and fills errors if the spec doesn't fit
 ## the config (unknown alien, air alien on a lane without an air route).
 func setup(config: SimConfig, spec: BattleSpec) -> bool:
+	# A fresh core battle each time, so a failed setup leaves an empty battle.
+	_native = SimNativeBattle.new()
 	errors = PackedStringArray()
 	if spec.total_spawns > SEQ_MASK:
 		errors.append("too many spawns: %d" % spec.total_spawns)

@@ -157,6 +157,23 @@ func test_air_alien_needs_an_air_route() -> bool:
 	return true
 
 
+func test_failed_setup_leaves_an_empty_battle() -> bool:
+	var battle: Battle = _battle(_spec([_group("swarmer", 3)]))
+	for i in 40:
+		battle.advance()
+	expect_true(battle.aliens.size() > 0, "aliens are on the lane before the second setup")
+	var spec_data: Dictionary = _spec([_group("skimmer", 1)])
+	var lane: Dictionary = spec_data["map"]["lanes"][0]
+	lane.erase("air")
+	var spec := BattleSpec.new()
+	expect_true(spec.parse(spec_data), "the spec itself is fine")
+	expect_true(not battle.setup(_config(), spec), "the second setup is refused")
+	expect_eq(battle.aliens.size(), 0, "aliens left from the first battle")
+	expect_eq(battle.tick, 0, "tick")
+	expect_eq(battle.spawned_count, 0, "spawned")
+	return true
+
+
 func test_times_out_at_max() -> bool:
 	var spec_data: Dictionary = _spec([_group("swarmer", 1)], 900000)
 	spec_data["max_ms"] = 5000
