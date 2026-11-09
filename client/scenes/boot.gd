@@ -2,22 +2,22 @@ extends Control
 ## M0 test build home screen. Started with the user argument
 ## --run-tests-and-quit (desktop CI), it runs the sim tests, checks that the
 ## Plugin Lab builds, prints the report and exits with 0 only if all passed.
+## Nothing here needs the sim library (SimLibrary), so the Plugin Lab opens
+## even on a phone where it failed to load.
 
 const Ui := preload("res://ui/ui_kit.gd")
-const SimReport := preload("res://ui/sim_report.gd")
-const SimVersion := preload("res://sim/core/sim_version.gd")
+const SimLibrary := preload("res://ui/sim_library.gd")
 
 
 func _ready() -> void:
 	if OS.get_cmdline_user_args().has("--run-tests-and-quit"):
-		var report: Dictionary = SimReport.run()
-		print(SimReport.as_text(report))
+		var sim_ok: bool = _run_sim_tests()
 		var lab_ok: bool = _plugin_lab_builds()
-		get_tree().quit(0 if report["ok"] and lab_ok else 1)
+		get_tree().quit(0 if sim_ok and lab_ok else 1)
 		return
 	var column: VBoxContainer = Ui.screen(self, "Alien Empire TD")
-	column.add_child(Ui.label("M0 test build · sim v%d · Godot %s" % [
-		SimVersion.SIM_VERSION, Engine.get_version_info()["string"],
+	column.add_child(Ui.label("M0 test build · %s · Godot %s" % [
+		SimLibrary.label(), Engine.get_version_info()["string"],
 	], 22, Ui.MUTED))
 	column.add_child(Ui.button("Sim tests", func() -> void:
 		get_tree().change_scene_to_file("res://scenes/sim_tests.tscn")
@@ -29,6 +29,18 @@ func _ready() -> void:
 		"Sim tests replay fixed battles and compare their hashes with the ones recorded on desktop. "
 		+ "Plugin Lab tries billing, ads, push, sign-in and Play Integrity on this phone.",
 		22, Ui.MUTED))
+
+
+## Desktop CI only: the sim's unit tests and golden battles, printed as a report.
+func _run_sim_tests() -> bool:
+	if not SimLibrary.loaded():
+		printerr(SimLibrary.NOT_LOADED)
+		print("RESULT: FAIL")
+		return false
+	var report_script: Variant = SimLibrary.report_script()
+	var report: Dictionary = report_script.run()
+	print(report_script.as_text(report))
+	return report["ok"]
 
 
 ## Desktop CI only: the Plugin Lab and every check in it must compile and build

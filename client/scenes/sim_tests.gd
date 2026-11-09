@@ -3,7 +3,7 @@ extends Control
 ## results. On a phone this is the "identical hash on Android" check of M0.
 
 const Ui := preload("res://ui/ui_kit.gd")
-const SimReport := preload("res://ui/sim_report.gd")
+const SimLibrary := preload("res://ui/sim_library.gd")
 
 
 func _ready() -> void:
@@ -16,8 +16,15 @@ func _ready() -> void:
 	# Let the screen draw once before the tests take over the main thread.
 	await get_tree().process_frame
 	await get_tree().process_frame
-	var report: Dictionary = SimReport.run()
-	print(SimReport.as_text(report))
+	if not SimLibrary.loaded():
+		printerr(SimLibrary.NOT_LOADED)
+		status.text = "SOME CHECKS FAILED"
+		status.add_theme_color_override("font_color", Ui.RED)
+		column.add_child(Ui.label(SimLibrary.NOT_LOADED, 22, Ui.status_color("fail")))
+		return
+	var report_script: Variant = SimLibrary.report_script()
+	var report: Dictionary = report_script.run()
+	print(report_script.as_text(report))
 	status.text = "ALL CHECKS PASS" if report["ok"] else "SOME CHECKS FAILED"
 	status.add_theme_color_override("font_color", Ui.TEAL if report["ok"] else Ui.RED)
 	for line in report["lines"]:

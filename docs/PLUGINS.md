@@ -131,6 +131,7 @@ Send screenshots of the **Sim tests** screen and of each Plugin Lab check after 
 
 | Message | Likely cause and fix |
 | --- | --- |
+| Sim tests: "The sim library (libaetd_sim) didn't load" | The phone couldn't load the C++ sim, so no battle ran. Send the screenshot; the Plugin Lab checks don't need the sim, so carry on with them. |
 | "Plugin not installed" or "isn't in this build" | Make sure you installed the latest CI APK: CI won't upload an APK that's missing a plugin. If it persists, the plugin's Android side didn't load on this phone; send the check's output. |
 | Billing: "didn't return m0_test_gems" | The product's purchase option isn't **Active** yet, or hasn't propagated, or the phone's main account isn't a license tester. |
 | Billing: `BILLING_UNAVAILABLE` or `DEVELOPER_ERROR` | Read Play's message after the code first. Usually there's no internal-testing release with the billing library yet, or the Play Store app is out of date. |
