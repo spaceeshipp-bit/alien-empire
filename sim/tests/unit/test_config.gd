@@ -56,21 +56,23 @@ func test_reads_the_largest_exact_json_int() -> bool:
 	return true
 
 
-## Godot's JSON parser rounds decimals before anything can check them, so the
-## reader refuses decimal notation in the text itself.
-func test_json_reader_refuses_decimal_notation() -> bool:
+## Godot's JSON parser rounds decimals and long zero-padded numbers before
+## anything can check them, so the reader refuses them in the text itself.
+func test_json_reader_refuses_numbers_godot_misreads() -> bool:
 	var refused := {
 		"{\"seed\": 9007199254740991.0}": "arrives one lower as a float",
 		"{\"seed\": 4503599627370495.5}": "arrives as a whole number",
 		"{\"n\": 12.0}": "a whole value, but written as a decimal",
 		"{\"n\": 1e3}": "an exponent",
 		"{\"list\": [1, 2, -0.5]}": "a negative fraction in a list",
+		"{\"seed\": 00000000000000000000123}": "leading zeros: Godot keeps 18 digits and reads 0",
+		"{\"n\": -007}": "leading zeros",
 	}
 	for text in refused:
 		var result: Dictionary = _read_text(text)
 		expect_true(not result["ok"], "%s is refused: %s" % [text, refused[text]])
 		expect_true(String(result["error"]).contains("whole number"), "the error says why: %s" % result["error"])
-	var fine: Dictionary = _read_text("{\"seed\": 9007199254740991, \"note\": \"1.5e3 \\\" -2.5\", \"n\": -7}")
+	var fine: Dictionary = _read_text("{\"seed\": 9007199254740991, \"note\": \"1.5e3 \\\" -2.5 007\", \"n\": -7, \"z\": 0, \"t\": 10}")
 	expect_true(fine["ok"], "whole numbers, and decimals inside strings, are fine: %s" % fine["error"])
 	return true
 
