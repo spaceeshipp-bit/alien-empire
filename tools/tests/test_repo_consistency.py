@@ -1,5 +1,6 @@
 """Cross-checks between files that must agree: golden scenarios and the frozen
 bundle, the GDScript file lists and the files on disk, the sim copies."""
+import json
 import re
 from pathlib import Path
 
@@ -226,6 +227,16 @@ def test_sync_notes_a_missing_library(tmp_path, monkeypatch, capsys):
     _fake_sim(tmp_path, monkeypatch, with_library=True)
     sync_sim.main([])
     assert "no built sim library" not in capsys.readouterr().out
+
+
+def test_sim_json_has_no_decimal_numbers():
+    """sim/core/json_file.gd refuses decimal notation (Godot rounds it before it can
+    be checked), so no JSON the sim reads may use it. Python's parser calls
+    parse_float for exactly the tokens with a fraction or an exponent."""
+    def refuse(token: str):
+        raise ValueError(f"decimal number {token}")
+    for path in sorted((REPO / "sim").rglob("*.json")):
+        json.loads(path.read_text(encoding="utf-8"), parse_float=refuse)
 
 
 def test_native_core_is_integer_only():
