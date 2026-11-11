@@ -26,7 +26,7 @@ Every design or technical decision, with its date, the options considered and th
 
 ### D-004 · 2026-11-08 · Integer units in config, decimals refused
 
-- **Decision:** every config number is an integer whose field name carries its unit: `_x100`, `_mt` (thousandths of a tile), `_mtps`, `_bp` (basis points), `_ms` (multiple of 50, one tick). `tools/config_tool.py` refuses any file with a decimal number, and the sim's loader refuses non-whole values. (Since D-029 the loader refuses decimal notation outright, because Godot's JSON parser rounds such numbers before anything can check them.) Conversions from the build prompt's tables are in `config/README.md`.
+- **Decision:** every config number is an integer whose field name carries its unit: `_x100`, `_mt` (thousandths of a tile), `_mtps`, `_bp` (basis points), `_ms` (multiple of 50, one tick). `tools/config_tool.py` refuses any file with a decimal number, and the sim's loader refuses non-whole values. (Since D-029 the loader refuses decimal notation and leading zeros outright, because Godot's JSON parser misreads such numbers before anything can check them.) Conversions from the build prompt's tables are in `config/README.md`.
 - **Options:** decimals in config, converted at load.
 - **Reason:** the sim must never touch floating point. Whole numbers in the files make every value exactly what the sim uses.
 
@@ -193,11 +193,11 @@ Every design or technical decision, with its date, the options considered and th
 - **Options:** invariants checked inside the C++ (they can't see a rule misread the same way twice); comparing builds and platforms with each other only (agreement isn't correctness); keeping the old GDScript sim as the reference (the build prompt wants one implementation in the game; a test-only model in another language is a stronger second opinion); goldens only.
 - **Reason:** measured. The model reproduces all four recorded goldens exactly. With twelve bugs planted in the core one at a time, the generated battles caught eleven and the goldens alone caught seven; the twelfth changes nothing observable. Over 4,500 extra battles on three seeds, every answer matched. The generated battles on the phone extend the M0 hash check from 4 battles to 44, with 912 more checkpoints, on the real Android build.
 
-### D-029 · 2026-11-11 · The JSON reader refuses decimal notation
+### D-029 · 2026-11-11 · The JSON reader refuses decimal notation and leading zeros
 
-- **Decision:** `sim/core/json_file.gd` refuses a file with any number written with a fraction or an exponent (`12.0`, `1e3`), naming the line, before the loaders read it. A tool test keeps decimal notation out of every JSON file under `sim/`.
+- **Decision:** `sim/core/json_file.gd` refuses a file with any number written with a fraction or an exponent (`12.0`, `1e3`) or with leading zeros (`007`), naming the line, before the loaders read it. A tool test keeps such numbers out of every JSON file under `sim/`.
 - **Options:** accept whole-valued floats, as before; parse numbers ourselves from the text.
-- **Reason:** Godot's JSON parser turns every number into a float before the loader can check it, so a decimal arrives already rounded: `9007199254740991.0` loaded as seed `9007199254740990`, and `4503599627370495.5` loaded as a whole number, against D-004. Refusing decimal notation in the text makes every accepted number exactly the integer written, matches `tools/config_tool.py`, and costs nothing: the sim's inputs are whole numbers by design.
+- **Reason:** Godot's JSON parser turns every number into a float before the loader can check it, so a decimal arrives already rounded: `9007199254740991.0` loaded as seed `9007199254740990`, and `4503599627370495.5` loaded as a whole number, against D-004. Godot also accepts leading zeros, which standard JSON forbids, and keeps only 18 digits, so `00000000000000000000123` loaded as `0`. Refusing both in the text makes every accepted number exactly the integer written, matches `tools/config_tool.py`, and costs nothing: the sim's inputs are whole numbers by design.
 
 ## Open questions for the owner
 
