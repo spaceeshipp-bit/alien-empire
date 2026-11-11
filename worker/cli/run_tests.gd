@@ -50,6 +50,12 @@ func _run(args: PackedStringArray) -> int:
 	if record_path.is_empty():
 		ok = ok and golden["ok"]
 	else:
+		# Recording rewrites the hand-written goldens only. The generated battles
+		# still have to match the reference model: regenerate them first after a
+		# rule change (docs/ENGINEERING.md).
+		if generated == 0 or generated_pass != generated:
+			printerr("the generated battles don't all match the reference model")
+			ok = false
 		ok = _record(golden, record_path) and ok
 	print("RESULT: " + ("PASS" if ok else "FAIL"))
 	return 0 if ok else 1
@@ -68,7 +74,7 @@ func _row_text(row: Dictionary) -> String:
 
 
 func _record(golden: Dictionary, path: String) -> bool:
-	var rows: Array = golden["rows"]
+	var rows: Array = golden["rows"].filter(func(row: Dictionary) -> bool: return row["kind"] == "golden")
 	if rows.is_empty():
 		printerr("not recording: no scenario ran")
 		return false
@@ -82,5 +88,5 @@ func _record(golden: Dictionary, path: String) -> bool:
 		return false
 	file.store_string(JSON.stringify(GoldenRunner.expected_document(golden), "  ") + "\n")
 	file.close()
-	print("Recorded %d golden hashes to %s" % [rows.size(), path])
+	print("Recorded %d golden hashes to %s" % [golden["recorded"].size(), path])
 	return true

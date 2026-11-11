@@ -185,14 +185,30 @@ static func _play(row_name: String, kind: String, spec_data: Dictionary, config:
 	return {"row": row, "result": result}
 
 
+## A battle passes only if its outcome, ticks, final hash and every checkpoint
+## match. The checkpoints matter on their own: a battle that clears ends with no
+## aliens on the field, so a mistake in where they walked shows only in them.
 static func _judge(row: Dictionary, want: Dictionary, result: Dictionary) -> void:
 	row["expected"] = String(want.get("final_hash", ""))
+	var want_checkpoints: Variant = want.get("checkpoints", [])
+	if typeof(want_checkpoints) != TYPE_ARRAY:
+		want_checkpoints = []
 	if (row["expected"] == row["hash"] and String(want.get("outcome", "")) == String(result["outcome"])
-			and int(want.get("ticks", -1)) == int(result["ticks"])):
+			and int(want.get("ticks", -1)) == int(result["ticks"])
+			and _same_strings(want_checkpoints, result["checkpoints"])):
 		row["status"] = "PASS"
 	else:
 		row["status"] = "FAIL"
-		row["detail"] = _first_divergence(want.get("checkpoints", []), result["checkpoints"])
+		row["detail"] = _first_divergence(want_checkpoints, result["checkpoints"])
+
+
+static func _same_strings(a: Array, b: Array) -> bool:
+	if a.size() != b.size():
+		return false
+	for i in a.size():
+		if String(a[i]) != String(b[i]):
+			return false
+	return true
 
 
 static func _first_divergence(want: Array, got: Array) -> String:

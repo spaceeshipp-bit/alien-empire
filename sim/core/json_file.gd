@@ -14,10 +14,10 @@ static func read(path: String) -> Dictionary:
 	var err: int = json.parse(text)
 	if err != OK:
 		return {"ok": false, "data": null, "error": "%s:%d: %s" % [path, json.get_error_line(), json.get_error_message()]}
-	var decimal: Dictionary = first_decimal(text)
-	if not decimal.is_empty():
-		return {"ok": false, "data": null, "error": "%s:%d: %s is written as a decimal; every number must be a whole number" % [
-			path, decimal["line"], decimal["token"]]}
+	var inexact: Dictionary = first_inexact_number(text)
+	if not inexact.is_empty():
+		return {"ok": false, "data": null, "error": "%s:%d: %s %s; every number must be a whole number, written plainly" % [
+			path, inexact["line"], inexact["token"], inexact["problem"]]}
 	return {"ok": true, "data": json.data, "error": ""}
 
 
@@ -30,12 +30,16 @@ static func read_dict(path: String) -> Dictionary:
 
 
 
-## The first number in JSON text written with a fraction or an exponent, as
-## {"line": int, "token": String}, or {} if there is none. Every number the sim
-## reads is a whole number (D-004), and Godot's parser turns decimals into floats
-## before anything can check them: 9007199254740991.0 arrives one lower, and
-## 4503599627370495.5 arrives as a whole number. So the text itself is checked.
-static func first_decimal(text: String) -> Dictionary:
+## The first number in JSON text that Godot's parser could read as a different
+## number, as {"line", "token", "problem"}, or {} if there is none. Every number
+## the sim reads is a whole number (D-004, D-029), and Godot turns each one into a
+## float before anything can check it:
+## - a fraction or an exponent arrives already rounded: 9007199254740991.0 comes
+##   out one lower, and 4503599627370495.5 as a whole number;
+## - leading zeros (which standard JSON forbids, but Godot accepts) count toward
+##   the 18 digits it keeps, so 00000000000000000000123 comes out as 0.
+## So the text itself is checked.
+static func first_inexact_number(text: String) -> Dictionary:
 	var in_string: bool = false
 	var line: int = 1
 	var i: int = 0
@@ -65,8 +69,12 @@ static func first_decimal(text: String) -> Dictionary:
 				elif not (d == 43 or d == 45 or (d >= 48 and d <= 57)):
 					break
 				i += 1
+			var token: String = text.substr(start, i - start)
 			if decimal:
-				return {"line": line, "token": text.substr(start, i - start)}
+				return {"line": line, "token": token, "problem": "is written as a decimal"}
+			var digits: String = token.trim_prefix("-")
+			if digits.length() > 1 and digits.begins_with("0"):
+				return {"line": line, "token": token, "problem": "has leading zeros"}
 			continue
 		i += 1
 	return {}
