@@ -1,6 +1,6 @@
 # Client (Godot 4.7.2)
 
-The phone app. In M0 it's a test build with two screens: **Sim tests** (unit tests and golden battles on the device) and **Plugin Lab** (one check per Android plugin).
+The phone app. In M0 it's a test build with two screens: **Sim tests** (unit tests, golden battles and generated battles on the device) and **Plugin Lab** (one check per Android plugin).
 
 ## Open it
 

@@ -52,7 +52,7 @@ Every design or technical decision, with its date, the options considered and th
 
 - **Decision:** golden scenarios run on `sim/tests/golden/config_bundle.json`, a frozen copy of the M0 config, not the live balance files. Hashes are recorded once and verified on the headless worker, the desktop client and the phone. The M0 hashes were recorded by CI's headless worker on 2026-11-08 and committed as `sim/tests/golden/expected.json`. CI fails if that file is missing; it then records fresh hashes into a `golden-hashes` artifact for review, so a re-record is always a reviewed commit.
 - **Options:** run goldens on the live config and re-record after every retune.
-- **Reason:** balance changes shouldn't break determinism tests. Only a sim change, with a `SIM_VERSION` bump, means re-recording. (Since D-028 a second set, generated battles with results from the reference model, runs on the same frozen config.)
+- **Reason:** balance changes shouldn't break determinism tests. Only a sim change, with a `SIM_VERSION` bump, means re-recording. (Since D-028 a second set, generated battles with results from the reference model, runs on the same frozen config. Adding a hand-written scenario also means re-recording: `docs/ENGINEERING.md` has the steps.)
 
 ### D-009 · 2026-11-08 · Sim copies and preload-only references
 
@@ -80,7 +80,7 @@ Every design or technical decision, with its date, the options considered and th
 
 ### D-013 · 2026-11-08 · CI on GitHub Actions
 
-- **Decision:** three jobs: config validation and tool tests; sim tests on the headless worker and on the desktop client under a virtual display; an Android debug APK uploaded as an artifact. Godot downloads are checked against the release's SHA-512 list. (Since D-028 two more: `core`, the C++ sim core alone on x86-64 and ARM with g++ and clang++, and `core-agree`, which requires them all to give the same answers; the sim job waits for both.)
+- **Decision:** three jobs: config validation and tool tests; sim tests on the headless worker and on the desktop client under a virtual display; an Android debug APK uploaded as an artifact. Godot downloads are checked against the release's SHA-512 list. (Since 2026-11-11 two more: `core`, the C++ sim core alone on x86-64 and ARM with g++ and clang++, and, with D-028, `core-agree`, which requires them all to give the same answers; the sim job waits for both.)
 - **Options:** another CI service; building locally only.
 - **Reason:** free for a solo project on GitHub, and the Android job hands the owner an APK to install without a local Godot setup.
 
@@ -185,19 +185,25 @@ Every design or technical decision, with its date, the options considered and th
 ### D-028 · 2026-11-11 · An independent model checks the sim core on every platform
 
 - **Decision:** a reference model in Python (`tools/reference/sim_model.py`) plays M0 battles from the rules, written another way: in closed form (each alien's spawn and leak tick, its distance and remainder at any tick) where the core steps tick by tick. It checks the core three ways:
-  - `tools/check_sim_native.py` plays fresh generated battles (`tools/sim_cases.py`, rebuilt from a seed and an index) on the C++ core and requires the model's outcome, ticks, every checkpoint and final hash, fresh and on a reused battle. One in ten breaks one of the core's limits and must be refused. The core is built three ways, sanitized at -O1 and plain at -O2 and -O3 (godot-cpp's debug and release levels), and every build must give the same answers. A failing battle is shrunk to a small one that still fails and saved with the command that reruns it.
+  - `tools/check_sim_native.py` plays fresh generated battles (`tools/sim_cases.py`, rebuilt from a seed and an index) on the C++ core and requires the model's outcome, ticks, every checkpoint and final hash, fresh and on a reused battle. One in ten breaks one of the core's limits and must be refused. The core is built three ways, sanitized at -O1 and plain at -O2 and -O3 (godot-cpp's debug and release levels), and every build must give the same answers. A failing battle is shrunk, with the build that showed the failure, to a small one that still fails, and saved with its seed and case; the log prints the command that reruns it.
   - CI's `core` job runs that on x86-64 and ARM with g++ and clang++, 400 battles per job, seeded by the run number so every run tries new ones; `core-agree` then requires the four jobs' answers to be identical.
-  - `tools/gen_battles.py` commits 40 generated battles with the model's results (`sim/tests/generated/battles.json`), which the golden runner plays through the GDScript loaders and the library on the worker, the desktop and the phone. They cover what the hand-written goldens don't: repeated waypoints, air routes, jitter, time-outs and seed 2^53 - 1.
+  - `tools/gen_battles.py` commits 40 generated battles with the model's results (`sim/tests/generated/battles.json`), which the golden runner plays through the GDScript loaders and the library on the worker, the desktop and the phone. They add what the hand-written goldens don't have: repeated waypoints, time-outs (24 of the 40) and seed 2^53 - 1, plus many more air routes and jitter draws. A battle passes only if every checkpoint matches.
 
   The model is test code only: it never produces a result the game or server uses, so the rule that the core is the only battle logic stands. A rule change that raises `SIM_VERSION` must teach the model the new rule in the same change, and the check refuses to compare across versions.
 - **Options:** invariants checked inside the C++ (they can't see a rule misread the same way twice); comparing builds and platforms with each other only (agreement isn't correctness); keeping the old GDScript sim as the reference (the build prompt wants one implementation in the game; a test-only model in another language is a stronger second opinion); goldens only.
-- **Reason:** measured. The model reproduces all four recorded goldens exactly. With twelve bugs planted in the core one at a time, the generated battles caught eleven and the goldens alone caught seven; the twelfth changes nothing observable. Over 4,500 extra battles on three seeds, every answer matched. The generated battles on the phone extend the M0 hash check from 4 battles to 44, with 912 more checkpoints, on the real Android build.
+- **Reason:** measured. The model reproduces all four recorded goldens exactly. With twelve bugs planted in the core one at a time, the fresh fuzz battles caught eleven and the goldens alone caught seven; the twelfth changes nothing observable. Over 4,500 extra battles on three seeds, every answer matched. The generated battles on the phone extend the M0 hash check from 4 battles to 44, with 912 more checkpoints, on the real Android build.
 
 ### D-029 · 2026-11-11 · The JSON reader refuses decimal notation and leading zeros
 
 - **Decision:** `sim/core/json_file.gd` refuses a file with any number written with a fraction or an exponent (`12.0`, `1e3`) or with leading zeros (`007`), naming the line, before the loaders read it. A tool test keeps such numbers out of every JSON file under `sim/`.
 - **Options:** accept whole-valued floats, as before; parse numbers ourselves from the text.
 - **Reason:** Godot's JSON parser turns every number into a float before the loader can check it, so a decimal arrives already rounded: `9007199254740991.0` loaded as seed `9007199254740990`, and `4503599627370495.5` loaded as a whole number, against D-004. Godot also accepts leading zeros, which standard JSON forbids, and keeps only 18 digits, so `00000000000000000000123` loaded as `0`. Refusing both in the text makes every accepted number exactly the integer written, matches `tools/config_tool.py`, and costs nothing: the sim's inputs are whole numbers by design.
+
+### D-030 · 2026-11-11 · The sim library is built with Godot's NDK, and CI checks it will load
+
+- **Decision:** `tools/build_sim_native.sh` builds the Android sim library with NDK 29.0.14206865, the version Godot 4.7.2 builds its own Android libraries with (`platform/android/detect.py`), instead of godot-cpp's default 28.1.13356709. After every APK export, `tools/ci/check_apk_sim_symbols.py` checks every symbol the sim library imports is defined by the APK's own C++ runtime (`libc++_shared.so`) or by Android's libc, libm and libdl for API 24 (the NDK's stub libraries). A tool test keeps the build script and CI on the same NDK.
+- **Options:** keep godot-cpp's default NDK; link our own copy of the C++ runtime statically into the sim library.
+- **Reason:** the APK holds one C++ runtime, `libc++_shared.so`, and Godot's NDK r29 build supplies it. The sim library imports 20 of its 36 symbols from it. The NDK's docs say ABI compatibility across NDK releases is attempted but "not always possible", and advise building with "the same version of the NDK whenever possible". They also say an app should not use more than one C++ runtime, which rules out a static copy. Android refuses to load a library with an unresolved import, and only the phone would show it. The symbol check found every import resolved in the run 24 APK, built with the old NDK, and catches the next mismatch in CI.
 
 ## Open questions for the owner
 
@@ -210,3 +216,4 @@ Every design or technical decision, with its date, the options considered and th
 | Q5 | How long does the Ion Disruptor's slow last, and does the Sensor Beacon mark while in range or per hit? | Not set | M2 |
 | Q6 | The game's package name (needs the title). | Test app uses `com.alienempiretd.pluginlab` | First Play upload of the game |
 | Q8 | CI's Gradle cache: keep the MIT-licensed basic cache, or accept Gradle's terms for the enhanced one (D-023)? | Basic | Any time |
+| Q9 | This project's own code and assets have no license: the repository is public, but all rights are reserved. Keep that, or choose a license, such as one for the code only? | All rights reserved | Before anyone outside contributes, and before release (M9) |

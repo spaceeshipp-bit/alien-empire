@@ -2,7 +2,7 @@
 
 A fair-to-play alien tower defense game for Android: PvE tower defense, async PvP raids, a shared sector map and clans. Built milestone by milestone from [`docs/BUILD_PROMPT.md`](docs/BUILD_PROMPT.md); every decision is logged in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
-**Current milestone:** M0 Foundations, on branch `m0-foundations`. Status and next steps: [`docs/milestones/M0.md`](docs/milestones/M0.md). Builders start with [`docs/HANDOFF.md`](docs/HANDOFF.md) (the current plan) and [`docs/ENGINEERING.md`](docs/ENGINEERING.md) (the standing rules and quality bar).
+**Current milestone:** M0 Foundations, on branch `m0-foundations`. Status and next steps: [`docs/milestones/M0.md`](docs/milestones/M0.md). The next milestone's plan and its questions for the owner: [`docs/milestones/M1.md`](docs/milestones/M1.md). Builders start with [`docs/HANDOFF.md`](docs/HANDOFF.md) (the current plan) and [`docs/ENGINEERING.md`](docs/ENGINEERING.md) (the standing rules and quality bar).
 
 ## Layout
 
