@@ -7,6 +7,7 @@ extends Control
 
 const Ui := preload("res://ui/ui_kit.gd")
 const SimLibrary := preload("res://ui/sim_library.gd")
+const BuildInfo := preload("res://ui/build_info.gd")
 
 
 func _ready() -> void:
@@ -16,8 +17,8 @@ func _ready() -> void:
 		get_tree().quit(0 if sim_ok and lab_ok else 1)
 		return
 	var column: VBoxContainer = Ui.screen(self, "Alien Empire TD")
-	column.add_child(Ui.label("M0 test build · %s · Godot %s" % [
-		SimLibrary.label(), Engine.get_version_info()["string"],
+	column.add_child(Ui.label("M0 test build · %s · %s · Godot %s" % [
+		BuildInfo.label(), SimLibrary.label(), Engine.get_version_info()["string"],
 	], 22, Ui.MUTED))
 	column.add_child(Ui.button("Sim tests", func() -> void:
 		get_tree().change_scene_to_file("res://scenes/sim_tests.tscn")
@@ -38,6 +39,10 @@ func _run_sim_tests() -> bool:
 		print("RESULT: FAIL")
 		return false
 	var report_script: Variant = SimLibrary.report_script()
+	if report_script == null:
+		printerr(SimLibrary.not_compiled_message())
+		print("RESULT: FAIL")
+		return false
 	var report: Dictionary = report_script.run()
 	print(report_script.as_text(report))
 	return report["ok"]

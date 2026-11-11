@@ -23,6 +23,13 @@ func _ready() -> void:
 		column.add_child(Ui.label(SimLibrary.NOT_LOADED, 22, Ui.status_color("fail")))
 		return
 	var report_script: Variant = SimLibrary.report_script()
+	if report_script == null:
+		var message: String = SimLibrary.not_compiled_message()
+		printerr(message)
+		status.text = "SOME CHECKS FAILED"
+		status.add_theme_color_override("font_color", Ui.RED)
+		column.add_child(Ui.label(message, 22, Ui.status_color("fail")))
+		return
 	var report: Dictionary = report_script.run()
 	print(report_script.as_text(report))
 	status.text = "ALL CHECKS PASS" if report["ok"] else "SOME CHECKS FAILED"

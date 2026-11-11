@@ -26,6 +26,9 @@
 /client/addons/godotx_firebase/
 /client/addons/PlayIntegrity/bin/
 
+# Which build this is: written by tools/ci/prepare_android_export.sh before export
+/client/build_info.json
+
 # Owner-specific Google files and signing keys never go in the repo
 google-services.json
 *.keystore

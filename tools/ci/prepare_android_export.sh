@@ -74,6 +74,10 @@ fi
 
 # Every export preset gets this run's version code.
 sed -i "s/^version\/code=.*/version\/code=$version_code/" "$repo/client/export_presets.cfg"
+# The app shows which build it is (client/ui/build_info.gd), so a screenshot
+# from the phone names the commit it came from.
+printf '{"version_code": %d, "commit": "%s"}\n' "$version_code" "$(git -C "$repo" rev-parse --short=7 HEAD)" \
+  > "$repo/client/build_info.json"
 
 # The settings file name has changed across Godot 4 releases; write both forms.
 config="$HOME/.config/godot"
