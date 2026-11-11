@@ -239,6 +239,30 @@ def test_sim_json_has_no_decimal_numbers():
         json.loads(path.read_text(encoding="utf-8"), parse_float=refuse)
 
 
+def test_ci_installs_the_ndk_the_build_uses():
+    """The sim library is built with Godot's NDK (tools/build_sim_native.sh), and CI must
+    install that same version for the build and for the symbol check."""
+    script = (REPO / "tools" / "build_sim_native.sh").read_text(encoding="utf-8")
+    version = re.search(r'^GODOT_NDK_VERSION="([0-9.]+)"', script, re.M).group(1)
+    workflow = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert re.findall(r"ndk[;/]([0-9]+\.[0-9]+\.[0-9]+)", workflow) == [version, version]
+
+
+def test_symbol_check_reads_readelf_rows():
+    import sys
+    sys.path.insert(0, str(REPO / "tools" / "ci"))
+    import check_apk_sim_symbols as c
+    rows = [
+        "    12: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND memcpy@LIBC (2)",
+        "    13: 0000000000000000     0 FUNC    WEAK   DEFAULT  UND __cxa_finalize@LIBC (2)",
+        "    14: 0000000000012340    64 FUNC    GLOBAL DEFAULT   12 aetd_sim_library_init",
+        "     2: 0000000000000000     0 SECTION LOCAL  DEFAULT    9 .text",
+    ]
+    parsed = [c.ROW.match(r).groups() for r in rows]
+    assert parsed[0] == ("FUNC", "GLOBAL", "UND", "memcpy@LIBC")
+    assert parsed[1][1] == "WEAK" and parsed[2][2] == "12" and parsed[3][0] == "SECTION"
+
+
 def test_native_core_is_integer_only():
     for source in (REPO / "sim" / "native" / "src" / "core").glob("*"):
         text = source.read_text(encoding="utf-8")

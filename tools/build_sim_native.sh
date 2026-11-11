@@ -9,8 +9,8 @@
 # tools/check_sim_native.py checks the same core without Godot, under sanitizers.
 #
 # Needs SCons (tools/requirements-build.txt), a C++17 compiler, and for Android the NDK
-# version godot-cpp asks for (28.1.13356709) under $ANDROID_HOME/ndk/. Then run
-# tools/sync_sim.py to copy sim/ (with sim/bin/) into the Godot projects.
+# below under $ANDROID_HOME/ndk/. Then run tools/sync_sim.py to copy sim/ (with
+# sim/bin/) into the Godot projects.
 set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
@@ -18,6 +18,11 @@ repo="$(cd "$(dirname "$0")/.." && pwd)"
 GODOT_CPP_TAG="10.0.0-stable"
 GODOT_CPP_COMMIT="507ed9d840c01a3c5b2a39af8bb4000bfac30bf5"
 godot_cpp="${GODOT_CPP_DIR:-$repo/build/godot-cpp}"
+# The NDK Godot 4.7.2 builds its Android libraries with (platform/android/detect.py).
+# The sim library shares Godot's C++ runtime (libc++_shared.so) in the APK, and the
+# NDK docs advise building with the same NDK as the libraries you share a runtime
+# with. godot-cpp would otherwise use 28.1.13356709. CI installs this version too.
+GODOT_NDK_VERSION="29.0.14206865"
 jobs="$(nproc 2>/dev/null || echo 4)"
 
 if [ "$#" -eq 0 ]; then
@@ -50,8 +55,8 @@ for platform in "$@"; do
       ;;
     android)
       : "${ANDROID_HOME:?ANDROID_HOME must point at the Android SDK}"
-      build platform=android arch=arm64 target=template_debug
-      build platform=android arch=arm64 target=template_release
+      build platform=android arch=arm64 target=template_debug ndk_version="$GODOT_NDK_VERSION"
+      build platform=android arch=arm64 target=template_release ndk_version="$GODOT_NDK_VERSION"
       ;;
     *)
       echo "error: unknown platform $platform (linux or android)" >&2
