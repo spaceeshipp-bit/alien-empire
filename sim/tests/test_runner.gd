@@ -19,9 +19,11 @@ static func run_all() -> Dictionary:
 	var lines := PackedStringArray()
 	for script_path in TEST_SCRIPTS:
 		var script: GDScript = load(script_path)
-		if script == null:
+		# Godot hands back a script that failed to compile rather than null, with
+		# no methods, so without this check its tests would silently not run.
+		if script == null or not script.can_instantiate():
 			failed += 1
-			lines.append("FAIL %s: can't load the test script" % script_path)
+			lines.append("FAIL %s: the test script doesn't compile" % script_path)
 			continue
 		var names: Array[String] = []
 		for method in script.get_script_method_list():
@@ -29,6 +31,10 @@ static func run_all() -> Dictionary:
 			if method_name.begins_with("test_") and not names.has(method_name):
 				names.append(method_name)
 		names.sort()
+		if names.is_empty():
+			failed += 1
+			lines.append("FAIL %s: has no test_ functions" % script_path)
+			continue
 		for method_name in names:
 			var label: String = "%s.%s" % [script_path.get_file().get_basename(), method_name]
 			var test_case: RefCounted = script.new()
