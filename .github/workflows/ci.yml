@@ -187,8 +187,8 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install -r tools/requirements-build.txt
-      - name: Install the Android NDK that godot-cpp builds with
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.1.13356709" > /dev/null
+      - name: Install the Android NDK that Godot 4.7.2 builds with (tools/build_sim_native.sh)
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;29.0.14206865" > /dev/null
       - name: Cache godot-cpp and the sim core's Android build
         uses: actions/cache@v6
         with:
@@ -235,6 +235,8 @@ jobs:
           test -s build/android/aetd-m0-debug.apk
       - name: Check every plugin is in the APK
         run: tools/ci/check_apk_plugins.sh build/android/aetd-m0-debug.apk
+      - name: Check the sim library's imports resolve on Android (API 24)
+        run: python3 tools/ci/check_apk_sim_symbols.py build/android/aetd-m0-debug.apk "$ANDROID_HOME/ndk/29.0.14206865" 24
       # Uploaded unzipped, so a phone downloads the .apk itself; each artifact
       # is named after its file. Before the AAB, so a failed AAB keeps the APK.
       - uses: actions/upload-artifact@v7
