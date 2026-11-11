@@ -73,6 +73,6 @@ Follow the build prompt's order. Standing concerns to carry forward:
 | Install the newest APK from `m0-foundations`. Run Sim tests and AdMob (step 1), do the one-time console setup and the other four checks (steps 2 to 7), and send screenshots (step 8). | Finishes M0 | `docs/PLUGINS.md` |
 | Until your upload key exists (step 2), uninstall the old app before installing a newer build: each build has a new throwaway key. | Android refuses to update an app signed with a different key | `docs/PLUGINS.md` step 1 |
 | Update your build prompt's Sim core line | D-026 changed it; the proposed wording is in D-026 | Your build prompt doc |
-| Answer M1's questions: the 3 towers and 3 aliens, field-tower upgrades and selling, lives, jitter, credits, the wave timer | Needed before M1 starts | `docs/milestones/M1.md` |
+| Answer M1's questions: the 3 towers and 3 aliens, field-tower upgrades and selling, lives, jitter, credits, the wave timer, the pressure terms, and when real art arrives (M1-G) | Needed before M1 starts | `docs/milestones/M1.md` |
 | Say which phone is your low-end test phone (M1-D) | M1 must hold 60 fps on a low-end phone | `docs/milestones/M1.md` |
 | Q8, Gradle cache terms | Optional | `docs/DECISIONS.md` |
