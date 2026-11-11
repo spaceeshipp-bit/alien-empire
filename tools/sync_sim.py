@@ -133,7 +133,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{name}: {sync(target)} file(s) updated")
     if args.check and not failed:
         print("sim copies are current")
+    if not built_libraries():
+        # Not an error: the tools job checks the copies before anything builds the
+        # library. But a project opened this way can't run the sim.
+        print("note: sim/bin/ has no built sim library, so the sim won't run in either project. "
+              "Build it with tools/build_sim_native.sh (sim/README.md), then sync again.")
     return 1 if failed else 0
+
+
+def built_libraries() -> list[Path]:
+    return sorted((SOURCE / "bin").glob("libaetd_sim.*")) if (SOURCE / "bin").is_dir() else []
 
 
 if __name__ == "__main__":

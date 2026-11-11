@@ -184,17 +184,48 @@ def test_sync_copies_no_native_sources():
         assert "res://sim/aetd_sim.gdextension" in listed
 
 
-def test_sync_replaces_files_without_touching_the_old_one(tmp_path):
-    src = tmp_path / "new.so"
-    src.write_bytes(b"new library")
-    dst = tmp_path / "bin" / "lib.so"
-    dst.parent.mkdir()
-    dst.write_bytes(b"old library")
-    with dst.open("rb") as loaded:  # stands in for Godot's mapping of the library
-        sync_sim.replace_file(src, dst)
+def _fake_sim(tmp_path, monkeypatch, with_library: bool):
+    """A small sim/ and two projects in tmp_path, with sync_sim pointed at them."""
+    source = tmp_path / "sim"
+    (source / "core").mkdir(parents=True, exist_ok=True)
+    (source / "core" / "battle.gd").write_text("extends RefCounted\n")
+    (source / "native" / "src").mkdir(parents=True, exist_ok=True)
+    (source / "native" / "src" / "battle.cpp").write_text("// not copied\n")
+    (source / "aetd_sim.gdextension").write_text("[configuration]\n")
+    if with_library:
+        (source / "bin").mkdir(exist_ok=True)
+        (source / "bin" / "libaetd_sim.linux.template_debug.x86_64.so").write_bytes(b"new library")
+    targets = (tmp_path / "client" / "sim", tmp_path / "worker" / "sim")
+    monkeypatch.setattr(sync_sim, "REPO", tmp_path)
+    monkeypatch.setattr(sync_sim, "SOURCE", source)
+    monkeypatch.setattr(sync_sim, "TARGETS", targets)
+    return source, targets
+
+
+def test_sync_replaces_a_loaded_library_without_touching_it(tmp_path, monkeypatch):
+    source, targets = _fake_sim(tmp_path, monkeypatch, with_library=True)
+    lib = "bin/libaetd_sim.linux.template_debug.x86_64.so"
+    for target in targets:
+        (target / "bin").mkdir(parents=True)
+        (target / lib).write_bytes(b"old library")
+    with (targets[0] / lib).open("rb") as loaded:  # stands in for Godot's mapping of the library
+        assert sync_sim.main([]) == 0
         assert loaded.read() == b"old library"
-    assert dst.read_bytes() == b"new library"
-    assert sorted(p.name for p in dst.parent.iterdir()) == ["lib.so"]
+    for target in targets:
+        assert (target / lib).read_bytes() == b"new library"
+        assert sorted(p.name for p in (target / "bin").iterdir()) == [Path(lib).name]  # no temp file left
+        assert not (target / "native").exists()
+    assert sync_sim.main(["--check"]) == 0
+
+
+def test_sync_notes_a_missing_library(tmp_path, monkeypatch, capsys):
+    _fake_sim(tmp_path, monkeypatch, with_library=False)
+    assert sync_sim.main([]) == 0
+    assert sync_sim.main(["--check"]) == 0  # not an error: CI checks the copies before building
+    assert "no built sim library" in capsys.readouterr().out
+    _fake_sim(tmp_path, monkeypatch, with_library=True)
+    sync_sim.main([])
+    assert "no built sim library" not in capsys.readouterr().out
 
 
 def test_native_core_is_integer_only():
