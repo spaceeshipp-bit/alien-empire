@@ -25,16 +25,21 @@ jobs:
         run: python3 tools/config_tool.py validate
       - name: Check the reference test vectors are current
         run: python3 tools/gen_vectors.py --check
+      - name: Check the generated battles are current
+        run: python3 tools/gen_battles.py --check
       - name: Tool tests
         run: python3 -m pytest -q tools/tests
 
   # The phone is ARM and the worker is x86-64, and both must give the same
   # hashes. This runs the C++ core alone on both, with both compilers, before
-  # any phone does.
+  # any phone does: sanitized, and as -O2 and -O3 builds like the ones that ship,
+  # against the vectors, the goldens, the committed generated battles and fresh
+  # ones checked against the reference model (D-028). The fresh battles' seed is
+  # the run number, so every run tries new ones; a failure prints how to rerun it.
   core:
     name: Sim core, ${{ matrix.cxx }} on ${{ matrix.runner }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -45,15 +50,52 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      - name: Sim core in C++, under UBSan and ASan, against the vectors and goldens
+      - name: Sim core in C++, against the vectors, goldens and generated battles
         env:
           CXX: ${{ matrix.cxx }}
-        run: python3 tools/check_sim_native.py
+        run: >-
+          python3 tools/check_sim_native.py --fuzz 400 --fuzz-seed ${{ github.run_number }}
+          --digest "$RUNNER_TEMP/core-digest.txt"
+      - name: Keep the failing battles
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: core-failures-${{ strategy.job-index }}
+          path: build/sim-native-check/fuzz-failures/
+          if-no-files-found: ignore
+          overwrite: true
+      - uses: actions/upload-artifact@v7
+        with:
+          name: core-digest-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/core-digest.txt
+          overwrite: true
+
+  # Each core job above already matches the model, so they agree with each other
+  # through it. This compares their answers directly too, so a platform
+  # difference can't hide behind a gap in the model.
+  core-agree:
+    name: Sim core gives the same answers everywhere
+    runs-on: ubuntu-24.04
+    needs: core
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: core-digest-*
+          path: digests
+      - name: Every platform and compiler gave the same answers
+        run: |
+          for f in digests/*/core-digest.txt; do echo "$f: $(cat "$f")"; done
+          [ "$(ls digests/*/core-digest.txt | wc -l)" -eq 4 ] || { echo "::error::expected 4 digests"; exit 1; }
+          [ "$(cat digests/*/core-digest.txt | sort -u | wc -l)" -eq 1 ] || {
+            echo "::error::the sim core gave different answers on different platforms or compilers"
+            exit 1
+          }
 
   sim:
     name: Sim tests, headless and desktop
     runs-on: ubuntu-24.04
-    needs: [tools, core]
+    needs: [tools, core-agree]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
