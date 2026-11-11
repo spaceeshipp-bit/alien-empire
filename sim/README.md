@@ -47,7 +47,7 @@ The first build fetches godot-cpp 10.0.0-stable, pinned by commit, into `build/g
 
 ## Tests
 
-- **Core check** (`tools/check_sim_native.py`): compiles the C++ core with UndefinedBehaviorSanitizer and AddressSanitizer and checks it against every reference vector and golden battle, without Godot.
+- **Core check** (`tools/check_sim_native.py`): compiles the C++ core with UndefinedBehaviorSanitizer and AddressSanitizer and checks it against every reference vector and golden battle, without Godot. CI runs it on x86-64 and ARM, with g++ and clang++.
 - **Unit tests** (`tests/unit/`) check each piece through the GDScript API, including integer division and the generator against vectors from `tools/gen_vectors.py`.
 - **Golden battles** (`tests/golden/`) replay fixed scenarios on a frozen config and compare final hashes with `expected.json`. A mismatch reports the first checkpoint that differs.
 

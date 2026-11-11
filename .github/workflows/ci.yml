@@ -27,13 +27,33 @@ jobs:
         run: python3 tools/gen_vectors.py --check
       - name: Tool tests
         run: python3 -m pytest -q tools/tests
+
+  # The phone is ARM and the worker is x86-64, and both must give the same
+  # hashes. This runs the C++ core alone on both, with both compilers, before
+  # any phone does.
+  core:
+    name: Sim core, ${{ matrix.cxx }} on ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        cxx: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
       - name: Sim core in C++, under UBSan and ASan, against the vectors and goldens
+        env:
+          CXX: ${{ matrix.cxx }}
         run: python3 tools/check_sim_native.py
 
   sim:
     name: Sim tests, headless and desktop
     runs-on: ubuntu-24.04
-    needs: tools
+    needs: [tools, core]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
