@@ -255,18 +255,22 @@ def still_fails(binary: Path, case: sim_cases.Case) -> bool:
         not matches(want, have) for (_, want, _), have in zip(plan.expect, got))
 
 
-def save_failure(binary: Path, seed: int, case: sim_cases.Case) -> Path:
+def save_failure(binary: Path, build: str, seed: int, case: sim_cases.Case) -> Path:
+    """Shrinks a failing case with the build that showed the failure and saves both."""
     smallest = shrink_case(binary, case) if case.valid else case
     folder = OUT / "fuzz-failures"
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f"{case.name}.json"
-    record = {"seed": seed, "case": case.to_json(), "smallest_failing": smallest.to_json()}
+    record = {"seed": seed, "build": build, "case": case.to_json(), "smallest_failing": smallest.to_json()}
     if smallest.valid:
         plan = Plan()
         add_case(plan, smallest, "smallest")
         record["driver_input"] = plan.lines
         record["expected"] = [str(want) for _, want, _ in plan.expect]
-        record["got"] = run_driver(binary, plan.lines).stdout.splitlines()
+        run = run_driver(binary, plan.lines)
+        record["got"] = run.stdout.splitlines()
+        if run.returncode != 0:
+            record["crash"] = run.stderr[-4000:]
     path.write_text(json.dumps(record, indent=1) + "\n", encoding="utf-8")
     return path
 
@@ -305,15 +309,23 @@ def main(argv: list[str] | None = None) -> int:
         runs = dict(zip(binaries, pool.map(lambda b: run_driver(b, plan.lines), binaries.values())))
 
     failures = 0
-    failed_cases: dict[str, sim_cases.Case] = {}
+    # Each failing generated case, with the first build that showed it: the
+    # sanitizers catch some failures and the optimized builds others, so a case
+    # is shrunk and recorded with the build it failed on.
+    failed_cases: dict[str, tuple[sim_cases.Case, str]] = {}
     for name, run in runs.items():
+        got = run.stdout.splitlines()
         if run.returncode != 0:
-            print(run.stdout[-2000:])
             print(run.stderr[-4000:])
             print(f"error: the {name} core check exited with {run.returncode}")
             failures += 1
+            # The case it crashed on is the one whose answer never came.
+            if len(got) < len(plan.expect):
+                what, _, case = plan.expect[len(got)]
+                print(f"  it stopped at: {what}")
+                if case is not None:
+                    failed_cases.setdefault(case.name, (case, name))
             continue
-        got = run.stdout.splitlines()
         if len(got) != len(plan.expect):
             print(f"error: {name}: expected {len(plan.expect)} answers, got {len(got)}")
             failures += 1
@@ -323,7 +335,7 @@ def main(argv: list[str] | None = None) -> int:
                 failures += 1
                 shown += 1
                 if case is not None:
-                    failed_cases[case.name] = case
+                    failed_cases.setdefault(case.name, (case, name))
                 if shown <= 10:
                     print(f"FAIL {name}: {what}\n  expected {want}\n  got      {have}")
     outputs = {name: run.stdout for name, run in runs.items()}
@@ -333,11 +345,11 @@ def main(argv: list[str] | None = None) -> int:
             f"{name} {hashlib.sha256(text.encode()).hexdigest()[:12]}" for name, text in outputs.items()))
 
     if failed_cases:
-        sanitized = binaries["sanitized -O1"]
-        for case in list(failed_cases.values())[:MAX_SHRINKS]:
-            path = save_failure(sanitized, args.fuzz_seed, case)
+        for case, build_name in list(failed_cases.values())[:MAX_SHRINKS]:
+            path = save_failure(binaries[build_name], build_name, args.fuzz_seed, case)
             index = case.name.rsplit("-", 1)[-1]
-            print(f"saved {path.relative_to(REPO)}; rerun with --fuzz-seed {args.fuzz_seed} --fuzz-case {index}")
+            print(f"saved {path.relative_to(REPO)} (failed on {build_name}); "
+                  f"rerun with --fuzz-seed {args.fuzz_seed} --fuzz-case {index}")
         if len(failed_cases) > MAX_SHRINKS:
             print(f"({len(failed_cases) - MAX_SHRINKS} more failing generated battles not shrunk)")
 
