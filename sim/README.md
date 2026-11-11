@@ -1,6 +1,6 @@
 # Sim core
 
-The one battle simulation. The phone runs it to play battles, and the server's worker runs the same code to replay and verify them, so a given seed, config and command log give the same result everywhere. Never re-implement battle logic anywhere else.
+The one battle simulation. The phone runs it to play battles, and the server's worker runs the same code to replay and verify them, so a given seed, config and command log give the same result everywhere. Never re-implement battle logic anywhere else. The one exception checks rather than plays: `tools/reference/sim_model.py` is a test-only model of the rules, written another way, that no game or server code may use (D-028).
 
 The battle itself is C++ (`native/`), built into a GDExtension that the client and the worker both load (docs/DECISIONS.md D-026: on a raid benchmark GDScript missed the 100 ms replay budget by 2 to 25 times, and got under it only after a rebuild for speed, and only while no unit died). The GDScript in `core/` reads and checks configs and battle specs and wraps the C++ with the API the rest of the game uses.
 
@@ -14,7 +14,7 @@ The battle itself is C++ (`native/`), built into a GDExtension that the client a
 - The C++ core uses only the C++ standard library: no Godot types, so it can be tested on its own under sanitizers. Godot types appear only in `native/src/godot/`.
 - C++ is built with `-fwrapv` and must not rely on unspecified order (sort only on unique keys, never iterate hashed containers).
 - GDScript loads sim scripts with `preload("res://sim/...")`; no `class_name`. The native classes (`SimNative`, `SimNativeBattle` and so on) are used only from `core/`.
-- Any change that could alter a battle's result raises `SIM_VERSION` in `native/src/core/fx.h`, and the golden hashes are then re-recorded.
+- Any change that could alter a battle's result raises `SIM_VERSION` in `native/src/core/fx.h`. The reference model learns the new rule, the generated battles are regenerated and the golden hashes re-recorded ("Changing a sim rule" in `docs/ENGINEERING.md`).
 
 ## Files
 
@@ -32,7 +32,7 @@ The battle itself is C++ (`native/`), built into a GDExtension that the client a
 | `core/battle_spec.gd`, `core/sim_config.gd` | Read and check a battle spec and a config bundle |
 | `core/lane_path.gd`, `core/sim_rng.gd`, `core/state_hasher.gd`, `core/fx.gd`, `core/sim_version.gd` | Thin wrappers over the core |
 | `core/data_reader.gd`, `core/json_file.gd` | Safe JSON reading |
-| `tests/` | Unit tests, reference vectors and golden battles |
+| `tests/` | Unit tests, reference vectors, golden battles (`tests/golden/`) and generated battles with the reference model's results (`tests/generated/`, written by `tools/gen_battles.py`) |
 
 ## Build
 
@@ -47,8 +47,15 @@ The first build fetches godot-cpp 10.0.0-stable, pinned by commit, into `build/g
 
 ## Tests
 
-- **Core check** (`tools/check_sim_native.py`): compiles the C++ core with UndefinedBehaviorSanitizer and AddressSanitizer and checks it against every reference vector and golden battle, without Godot. CI runs it on x86-64 and ARM, with g++ and clang++.
-- **Unit tests** (`tests/unit/`) check each piece through the GDScript API, including integer division and the generator against vectors from `tools/gen_vectors.py`.
-- **Golden battles** (`tests/golden/`) replay fixed scenarios on a frozen config and compare final hashes with `expected.json`. A mismatch reports the first checkpoint that differs.
+- **Core check** (`tools/check_sim_native.py`): compiles the C++ core three ways, under UndefinedBehaviorSanitizer and AddressSanitizer and as plain -O2 and -O3 builds like the shipped libraries, and checks every build, without Godot, against:
+  - every reference vector;
+  - every golden and committed generated battle;
+  - fresh generated battles, each matched to the reference model and replayed on a reused battle;
+  - battles built to break the core's limits, which it must refuse.
 
-The unit tests and goldens run through `worker/cli/run_tests.gd` (headless), the client's `--run-tests-and-quit` (desktop) and the client's Sim tests screen (phone), so the same C++ is checked on x86-64 and on the phone's ARM.
+  CI runs it on x86-64 and ARM, with g++ and clang++, and requires all four to give the same answers (D-028).
+- **Unit tests** (`tests/unit/`) check each piece through the GDScript API, including integer division, the JSON reader and the generator against vectors from `tools/gen_vectors.py`. A test file that doesn't compile fails the run.
+- **Golden battles** (`tests/golden/`) replay fixed scenarios on a frozen config and compare final hashes with `expected.json`. A mismatch reports the first checkpoint that differs.
+- **Generated battles** (`tests/generated/battles.json`) are 40 battles from `tools/gen_battles.py`, played the same way as the goldens and compared with the reference model's results. Regenerate the file after a rule change; CI checks it's current.
+
+The unit tests, goldens and generated battles run through `worker/cli/run_tests.gd` (headless), the client's `--run-tests-and-quit` (desktop) and the client's Sim tests screen (phone), so the same C++ is checked on x86-64 and on the phone's ARM.

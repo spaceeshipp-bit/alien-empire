@@ -11,7 +11,7 @@ The phone app. In M0 it's a test build with two screens: **Sim tests** (unit tes
 
 ## Export the Android test build
 
-CI builds it on every push (the `aetd-m0-debug.apk` artifact, plus `aetd-m0-release.aab` once the upload key is set up). To build it yourself you need JDK 17, Gradle 8.9 or newer on PATH (CI uses 8.14.3), the Android SDK, the Godot 4.7.2 export templates and network access for Gradle.
+CI builds it on every push (the `aetd-m0-debug.apk` artifact, plus `aetd-m0-release.aab` once the upload key is set up). CI also writes `client/build_info.json` (git-ignored) before export, so the app names its build and commit on the home screen and the Sim tests report; a build from the editor says "local build". To build it yourself you need JDK 17, Gradle 8.9 or newer on PATH (CI uses 8.14.3), the Android SDK, the Godot 4.7.2 export templates and network access for Gradle.
 
 1. `tools/build_android_plugins.sh` builds the Play Integrity plugin, and `tools/build_sim_native.sh android` the sim core for the phone (run `tools/sync_sim.py` after).
 2. In Godot, Project > Install Android Build Template.
