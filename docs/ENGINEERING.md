@@ -33,7 +33,8 @@ Each system ships with all of these, or the reason one doesn't apply is written 
 Reviews have paid for themselves every time. So far they have caught:
 - a use-after-free in battle reuse
 - a loader that refused a valid seed
-- a loader that rounded decimals silently
+- a loader that rounded decimals and zero-padded numbers silently
+- golden checks that ignored every checkpoint before the last
 - a test runner that skipped test files that didn't compile
 - a CI dead end for re-recording goldens
 - several wrong numbers in docs
