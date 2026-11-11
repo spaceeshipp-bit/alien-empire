@@ -36,8 +36,15 @@ func _run(args: PackedStringArray) -> int:
 	var golden: Dictionary = GoldenRunner.run_all()
 	for line in golden["errors"]:
 		print("NOTE " + str(line))
+	var generated: int = 0
+	var generated_pass: int = 0
 	for row in golden["rows"]:
 		print(_row_text(row))
+		if row["kind"] == "generated":
+			generated += 1
+			generated_pass += 1 if row["status"] == "PASS" else 0
+	if generated > 0:
+		print("Generated battles: %d of %d match the reference model" % [generated_pass, generated])
 
 	var ok: bool = unit["failed"] == 0
 	if record_path.is_empty():
