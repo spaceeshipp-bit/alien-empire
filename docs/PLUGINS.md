@@ -58,8 +58,8 @@ Do the steps in order. Steps 1 and 2 need no Google accounts beyond the phone's.
 2. Open the repo's **Actions** tab, then the newest green **CI** run on `m0-foundations`.
 3. Scroll to **Artifacts** and tap **aetd-m0-debug.apk**. It downloads as an APK.
 4. Open the download and follow the prompts. The first time, Android asks to allow installs from your browser: on that message tap **Settings** and turn on **Allow from this source**, then continue the install. Play Protect may offer to scan an app it hasn't seen before; that's expected, let it scan.
-5. If Android says the app isn't installed because it conflicts with an existing package, uninstall **AETD Plugin Lab** first. Builds signed with different keys can't update each other; this happens once, when you move to your upload key in step 2.
-6. Open **AETD Plugin Lab** and tap **Sim tests**. After a few seconds the line under **Back** should read **ALL CHECKS PASS**, and the unit-test line and the four g01 to g04 lines should be teal (the first line, with the phone model and versions, is grey). Take a screenshot. This is the "same hash on Android" check of M0.
+5. If Android says the app isn't installed because it conflicts with an existing package, uninstall **AETD Plugin Lab** first. Until your upload key is set up (step 2), every CI build is signed with a new throwaway key, and builds signed with different keys can't update each other, so uninstall the old app each time you install a newer build. Once the upload key is in, each build updates the last.
+6. Open **AETD Plugin Lab** and tap **Sim tests**. After a few seconds the line under **Back** should read **ALL CHECKS PASS**. The unit-test line, the four g01 to g04 lines and the **Generated battles: 40 of 40** line should be teal. The first line is grey: it names the phone, the versions and the build, for example "build 2601 · abc1234", which should match the CI run you downloaded. Take a screenshot. This is the "same hash on Android" check of M0.
 7. Back on the home screen, open **Plugin Lab** and run **AdMob rewarded ad**. A Google test ad plays; watch it to the end. The check passes when the SDK grants the reward.
 
 From a computer with the Android platform tools, `adb install -r aetd-m0-debug.apk` works too.
@@ -132,6 +132,8 @@ Send screenshots of the **Sim tests** screen and of each Plugin Lab check after 
 | Message | Likely cause and fix |
 | --- | --- |
 | Sim tests: "The sim library (libaetd_sim) didn't load" | The phone couldn't load the C++ sim, so no battle ran. Send the screenshot; the Plugin Lab checks don't need the sim, so carry on with them. |
+| Sim tests: "These sim scripts don't compile with this sim library" | The app's scripts and its sim library come from different builds, which a CI APK shouldn't have. Send the screenshot; it names the scripts. |
+| Sim tests: a generated battle in red | The phone played that battle differently from the reference model. Send the screenshot: the line names the battle and the first checkpoint that differs. |
 | "Plugin not installed" or "isn't in this build" | Make sure you installed the latest CI APK: CI won't upload an APK that's missing a plugin. If it persists, the plugin's Android side didn't load on this phone; send the check's output. |
 | Billing: "didn't return m0_test_gems" | The product's purchase option isn't **Active** yet, or hasn't propagated, or the phone's main account isn't a license tester. |
 | Billing: `BILLING_UNAVAILABLE` or `DEVELOPER_ERROR` | Read Play's message after the code first. Usually there's no internal-testing release with the billing library yet, or the Play Store app is out of date. |

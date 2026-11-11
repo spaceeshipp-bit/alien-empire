@@ -2,7 +2,7 @@
 
 A fair-to-play alien tower defense game for Android: PvE tower defense, async PvP raids, a shared sector map and clans. Built milestone by milestone from [`docs/BUILD_PROMPT.md`](docs/BUILD_PROMPT.md); every decision is logged in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
-**Current milestone:** M0 Foundations, on branch `m0-foundations`. Status and next steps: [`docs/milestones/M0.md`](docs/milestones/M0.md).
+**Current milestone:** M0 Foundations, on branch `m0-foundations`. Status and next steps: [`docs/milestones/M0.md`](docs/milestones/M0.md). Builders start with [`docs/HANDOFF.md`](docs/HANDOFF.md) (the current plan) and [`docs/ENGINEERING.md`](docs/ENGINEERING.md) (the standing rules and quality bar).
 
 ## Layout
 
@@ -13,15 +13,17 @@ A fair-to-play alien tower defense game for Android: PvE tower defense, async Pv
 | `worker/` | Headless Godot project that runs the sim: tests now, server-side battle replays from M4 |
 | `server/` | Nakama backend modules (M4) |
 | `config/` | Every balance number, as JSON checked against a schema |
-| `tools/` | Config validator, reference test vectors, sync and build scripts, CI helpers |
-| `docs/` | Build prompt, decisions, plugin setup, milestone reports |
+| `tools/` | Config validator, reference test vectors, the sim's reference model and battle generator, sync and build scripts, CI helpers |
+| `docs/` | Build prompt, decisions, the builder handoff and engineering rules, plugin setup, licenses, milestone reports |
 
 ## Quick checks (Python 3.11+)
 
 ```sh
 pip install -r tools/requirements.txt
 python3 tools/config_tool.py validate     # config against the schema and cross-file rules
-python3 -m pytest -q tools/tests          # tool tests, reference vectors, repo consistency
+python3 -m pytest -q tools/tests          # tool tests, reference vectors, reference model, repo consistency
+python3 tools/gen_battles.py --check       # the committed generated battles match the reference model
+python3 tools/check_sim_native.py          # the C++ core alone: three builds, goldens, generated battles
 ```
 
 ## Sim tests (Godot 4.7.2)
@@ -29,7 +31,6 @@ python3 -m pytest -q tools/tests          # tool tests, reference vectors, repo 
 The battle sim is C++ (`sim/native`), built into a GDExtension both Godot projects load.
 
 ```sh
-python3 tools/check_sim_native.py          # the C++ core alone, under sanitizers
 pip install -r tools/requirements-build.txt
 tools/build_sim_native.sh linux            # builds sim/bin/ (fetches the pinned godot-cpp)
 python3 tools/sync_sim.py
