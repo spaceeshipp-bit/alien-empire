@@ -1,111 +1,100 @@
 # Builder handoff
 
-Written 2026-11-11 for the next builder session. Read this first, then `docs/milestones/M0.md`, `docs/DECISIONS.md` and the "Working rules for the AI builder" in `docs/BUILD_PROMPT.md`. Delete each section here as its work lands; the milestone docs are the lasting record.
+Updated 2026-11-11. Read this first, then `docs/ENGINEERING.md` (the standing rules and quality bar), `docs/milestones/M0.md`, `docs/DECISIONS.md` and the "Working rules for the AI builder" in `docs/BUILD_PROMPT.md`. This file is the current plan only: replace each step as it lands. Commits are named by subject, because cherry-picks give them new IDs on the milestone branch.
 
 ## Where things stand
 
-- **M0 is built and green in CI.** Every job passes: config and tools, the C++ sim core on x86-64 and ARM, sim tests on the headless worker and the desktop client, and the Android APK with all five plugins and the sim library inside.
-- **M0 is not done.** It is done when the owner's phone shows **Sim tests: ALL CHECKS PASS** and every Plugin Lab check passes (`docs/PLUGINS.md`). Nothing merges into `main` before that. Do not start M1 code on `m0-foundations`.
-- **The sim is C++ in a GDExtension** (D-026). GDScript parses and checks inputs and wraps the core. The build prompt's "pure GDScript" line is waiting on the owner's doc (see Owner actions).
-- **Reviewed.** A 47-agent adversarial review of the C++ port, with a 1,800-spec differential fuzz against the old GDScript sim, found no mismatch and no determinism defect. Its ten confirmed findings (one loader bug, CI and tooling gaps, doc errors) are fixed. A second review of those four fix commits (`a4421ac`, `b09950b`, `e346d04`, `9133f94`) did not run. Do it first: it is step 1 below.
+- **M0 is built and green in CI** on `m0-foundations`. `docs/milestones/M0.md` names the newest green run.
+- **M0 is not done.** It's done when the owner's phone shows **Sim tests: ALL CHECKS PASS** and every Plugin Lab check passes (`docs/PLUGINS.md`). Nothing merges into `main` before that. Don't start M1 code on `m0-foundations`.
+- **The sim is C++ in a GDExtension** (D-026). GDScript parses and checks inputs and wraps the core. The build prompt's "pure GDScript" line waits on the owner's doc (see Owner actions).
+- **What the phone checks now:**
+  - 35 unit tests;
+  - 4 hand-written goldens;
+  - 40 generated battles whose results come from an independent reference model (D-028), with 912 checkpoints.
 
-## Hard rules, on top of the build prompt's
-
-1. **Never build godot-cpp or run `tools/build_sim_native.sh` in the cloud workspace.** It is refused there. CI builds the library; locally use `tools/check_sim_native.py`, the tool tests and Godot without the library.
-2. **Never `git reset --hard`, never force-push `m0-foundations` or `main`.** Iterate on the session branch, then cherry-pick clean commits onto `m0-foundations`.
-3. **The repo is public.** Keys, `google-services.json` and account IDs live only in Actions secrets and variables (D-020, D-021).
-4. **`docs/BUILD_PROMPT.md` is a copy of the owner's doc.** Change it only when the owner's doc changes, in the same commit as a decision entry.
-5. **A change that can alter a battle's result bumps `SIM_VERSION`** in `sim/native/src/core/fx.h` and re-records the goldens through CI (D-008). A change that cannot must say why in its commit message.
-6. **No float or double in `sim/native/src/core/`**, no hashed-container iteration, no sort on non-unique keys, no engine random or time. A tool test enforces the first; the rest are review items.
-7. **Every balance number lives in `config/`** with its knob documented in the schema.
-8. **Claims need evidence.** "Passes" means a command's output or a CI run ID. A number in a doc names where it was measured.
-
-## The quality bar for every piece of work
-
-Each system ships with all of these, or the reason one doesn't apply is written down:
-
-| Layer | What it is | Where |
-| --- | --- | --- |
-| Unit tests | Each rule alone, including the refusals | `sim/tests/unit/`, `tools/tests/` |
-| Sanitizer run | The C++ core under UBSan and ASan, on x86-64 and ARM, g++ and clang++ | `tools/check_sim_native.py`, CI job `core` |
-| Golden battles | Fixed scenarios, final hash and every checkpoint | `sim/tests/golden/` |
-| Reference model | A second, independent implementation of each new rule (Python), compared with the core on generated cases | extend `tools/gen_vectors.py` and the vectors |
-| Differential or property fuzz | Random valid inputs: same result twice, same result on a reused battle, invariants hold (HP never rises without a heal, IDs ascend, no entity outside the map) | new, see step 3 |
-| Misuse tests | Wrong order of calls, refused inputs, reuse after failure | core check and unit tests |
-| Adversarial review | Independent reviewers with different lenses, then skeptics who try to refute each finding; fix what survives | before every merge to a milestone branch |
-| Phone check | The owner runs it on a real device | walkthrough in the milestone doc |
-
-Reviews so far paid for themselves: they caught a use-after-free in battle reuse, a loader that refused a valid seed, a CI dead end for re-recording goldens, and several wrong numbers in docs. Keep doing them, and keep the skeptic pass so findings are real.
+  The screen names its build ("build 2601 · abc1234"), so a screenshot ties to a commit. It also shows the sim's speed in ns per alien-tick, which fills M0's last empty speed row.
+- **Reviews done.** The handoff's step 1 review ran: one reviewer for the code fixes and the CI `core` job, one for the docs and this plan. Each finding was then checked by reproducing it.
+  - Every confirmed problem is fixed. See the commits "Sim tests: fail a test file that doesn't compile", "Sim loader: refuse decimal notation in JSON", "sync_sim: say when there's no library; test sync() itself", "Client: catch a library from another build; show the build and speed" and the docs corrections.
+  - The fixes were checked against Godot 4.7.2 itself, using CI's built library locally. One suggested fix wouldn't have worked: Godot reports a failed compile only on the script with the error, not on scripts that depend on it.
+  - The handoff's step 2 (harden M0 while waiting for the phone) is done: D-028's model and fuzz, the `core-agree` job, the version-skew guard, the missing-library note, the phone speed line and `docs/LICENSES.md`.
 
 ## Plan
 
-### Step 1. Close out the current branch (small)
+### Step 1. The owner's phone check (now)
 
-1. Re-run the review that didn't run: one reviewer for the code in `a4421ac`, `b09950b`, `e346d04` and the CI `core` job, one for the docs in `9133f94` and this file, two skeptics per finding. Fix what survives.
-2. Confirm the newest CI run on `m0-foundations` is green, including all four `core` matrix jobs, and that `aetd-m0-debug.apk` is in its artifacts.
-3. Tell the owner the APK to install is the newest green run on `m0-foundations`.
+Tell the owner the APK to install is the newest green CI run on `m0-foundations` (its number is in M0.md). Steps 1 to 8 of the walkthrough in `docs/PLUGINS.md`; screenshots come back.
 
-### Step 2. While waiting for the phone (no M1 code yet)
+When they arrive:
+1. Check the build line on the Sim tests screenshot matches the newest commit on `m0-foundations`. If it's older, ask for Sim tests again on the newest build. Only the build that merges counts.
+2. If a check fails, fix it on `m0-foundations`, with a test that would have caught it where one can exist, and send a new APK. Don't work around a failing check.
 
-These harden M0 and cost the owner nothing. Each is its own commit with tests.
+### Step 2. Finish M0 when the phone passes
 
-1. **Property fuzz in CI.** Add a fuzz mode to `tools/check_sim_native.py`: a few hundred seeded random specs per run through the sanitizer build, checking run-twice equality, reuse equality and invariants. Seeded, so a failure reproduces. The earlier differential harness is gone with the old GDScript sim; this replaces it.
-2. **Cross-platform hash proof.** The `core` job already runs goldens on ARM. Add its fuzz hashes as an artifact from x86-64 and ARM and compare them in a final job, so any platform divergence fails CI before a phone sees it.
-3. **Version-skew guard.** If the library loads but the sim scripts don't compile, the phone's Sim tests screen stays on "Running…". Make `client/ui/sim_library.gd` detect a null report script and show a message. Add the `SIM_VERSION` the app expects next to the one the library reports.
-4. **`sync_sim.py --check` when `sim/bin/` is empty.** It passes today. Make it say the library is missing, without failing the tools job, which runs before the build.
-5. **Phone speed line.** Have the Sim tests screen print ns per alien-tick like the worker does, so the first phone screenshot fills the last empty row of M0's speed table.
-6. **Credits file.** Start `docs/LICENSES.md` listing Godot, godot-cpp and each plugin with license and notice text (the build prompt's rule on recorded licenses; D-026 promises godot-cpp's notice in the credits).
+1. In `docs/milestones/M0.md`, record:
+   - the Sim tests result: unit tests, the 4 goldens and the 40 generated battles;
+   - the phone's ns per alien-tick, in the speed table;
+   - each Plugin Lab check.
+2. Tick the last boxes. Write the close-out the working rules ask for: what changed, how to try it, open issues.
+3. Run the review protocol over everything since the last review (`docs/ENGINEERING.md`). Fix what survives.
+4. Ask the owner to confirm. Then merge `m0-foundations` into `main` with a merge commit, and branch `m1-pve-slice` from `main`.
 
-### Step 3. When the phone passes: finish M0
+### Step 3. M1 PvE slice
 
-1. Record the owner's screenshots' results in `docs/milestones/M0.md` (hashes match on ARM, each plugin check, phone speed).
-2. Tick the last two boxes, write the "what changed, how to try it, open issues" close-out the working rules ask for.
-3. Ask the owner to confirm, then merge `m0-foundations` into `main` with a merge commit. Only then branch `m1-pve-slice` from `main`.
+The build prompt's M1: "one map, 3 towers, 3 aliens, 10 waves, field towers, placeholder art". Done when it holds 60 fps on a low-end phone and wave pressure is within target.
 
-If a phone check fails, fix it on `m0-foundations`, with a test that would have caught it where one is possible, and send a new APK. Do not work around a failing check.
+Before any code, post the plan the working rules require (systems, files, tests) and get the owner's answers. They need:
+- Q1 to Q3 in `docs/DECISIONS.md`: Hive Carrier leak lives, starting lives, spawn jitter;
+- which 3 towers and 3 aliens make the slice. `config/balance/` has all six of each;
+- whether M1's field towers include upgrades and selling. The rules are in the build prompt's field tower upgrade line; how to read them is Q4, due by M2 by default. If they're in M1, Q4 moves to M1.
+- which phone counts as low-end, and whether the owner has one.
 
-### Step 4. M1 PvE slice
-
-Done when it holds 60 fps on a low-end phone and wave pressure is within target. Before any code, post the plan the working rules require (systems, files, tests) and get answers to Q1 to Q3 in `docs/DECISIONS.md`: Hive Carrier leak lives, starting lives, spawn jitter. Use the defaults there only if the owner says so.
+Use a default only where the owner says so.
 
 Build in this order, each with the full quality bar:
 
-1. **Battle state in the core, data-oriented.** Towers, projectiles or instant hits, and aliens as flat arrays in ID order. Extend the state hash for every new field, in a fixed documented order, and bump `SIM_VERSION`.
-2. **Command log.** Field-tower place, upgrade and sell as commands with a tick. `battle_spec.gd` already refuses unknown commands; add each known one with range checks on both sides (GDScript loader and C++ setup).
-3. **Targeting.** Spatial grid, re-pick every few ticks and when a target dies or leaves range, never every tick for a unit with no target (D-026's last benchmark row shows why). Ties break by ID.
-4. **Damage pipeline** exactly in the build prompt's order, all values from config, integer rounding stated for each step and mirrored in the Python reference.
-5. **Waves and pressure.** Ten waves on one map from config; a headless tool that plays them with a fixed tower layout and reports leak and kill rates against the target.
-6. **Client battle view.** Draws from core state each frame, interpolating between ticks for display only. The sim never reads anything back from the view. Measure frame time on the phone from the first build.
-7. **Goldens for M1.** New scenarios with towers and commands, recorded through CI, plus a replay test: the worker replays a battle the client played and the hashes match.
+1. **Battle state in the core, data-oriented.**
+   - Towers, hits and aliens live as flat arrays in ID order.
+   - Extend the state hash for every new field, in a documented order.
+   - Raise `SIM_VERSION`, then follow "Changing a sim rule" in `docs/ENGINEERING.md`: model, generated battles, goldens.
+2. **Command log.**
+   - Field-tower placement, with a tick. Upgrade and sell only if they're in M1.
+   - `battle_spec.gd` already refuses unknown commands. Add each known one with range checks on both sides: the GDScript loader and the C++ setup.
+   - Teach the generator to emit commands, valid and out of range, and teach the model to apply them.
+3. **Targeting.**
+   - A spatial grid. A unit re-picks every few ticks, and when its target dies or leaves range, never every tick for a unit with no target (D-026's last benchmark row shows why). Ties break by ID.
+   - The model finds targets by brute force over all units in ID order, so the fuzz checks the grid against an answer that doesn't use one.
+4. **Damage pipeline**, exactly in the build prompt's order, with every value from config. State the integer rounding for each step, and mirror it in the model.
+5. **Waves and pressure.**
+   - Ten waves on one map, from config.
+   - A headless balance tool computes each wave's pressure ratio as the build prompt defines it: total wave HP ÷ (spawn time + time in the kill zone), against the damage per second the credits available by that wave can buy.
+   - It checks the ratio against the targets: 0.4 to 0.6 on early waves, 0.8 to 1.0 on the last wave, about 1.1 on boss waves.
+   - Leak and kill rates with a fixed tower layout are an extra check, not the target.
+6. **Client battle view.** It draws from core state each frame and interpolates between ticks for display only; the sim never reads anything back from the view. Measure frame time on the phone from the first build.
+7. **Goldens and replay.** New scenarios with towers and commands, recorded through CI. Add a replay test: the worker replays a battle the client played, and the hashes match.
 
-Budget checks from the first combat commit: the worker prints ms per battle; fail CI if a reference M1 battle takes more than a set time on the runner, so a slowdown is seen the day it lands.
+Speed checks start with the first combat commit. CI runners vary 2 to 3 times between runs (M0's speed table shows it), so don't compare against a fixed time. In the same job, time a fixed reference battle and the new code, best of several runs each, and fail on the ratio.
 
 ### Later milestones
 
-Follow the build prompt's order (M2 full combat, M3 base, M4 backend, M5 raids, and on). Standing concerns to carry forward:
+Follow the build prompt's order. Standing concerns to carry forward:
 
-- **M2:** the raid replay budget is measured on the real sim as soon as raid units exist; don't wait for M4's formal check.
-- **M4:** the worker loads the same library as the phone; the server keeps every `SIM_VERSION` still in use, so plan how old libraries are stored and selected before the first live battle record.
-- **M4, security:** the worker parses specs and command logs that come from clients. Fuzz the GDScript loaders and the C++ setup with malformed input before exposing them.
-- **M9:** real AdMob IDs, EU consent, notification icon, credits screen from `docs/LICENSES.md`.
+- **M2:** measure the raid replay budget on the real sim as soon as raid units exist; don't wait for M4's formal check.
+- **M4:**
+  - The worker loads the same library as the phone. The server keeps every `SIM_VERSION` still in use, so plan before the first live battle record how old libraries are stored and chosen.
+  - Security: the worker parses specs and command logs that come from clients. The generator already builds out-of-range battles for the C++ setup. Before exposing anything, add malformed JSON and malformed fields for the GDScript loaders.
+- **M9:**
+  - Real AdMob IDs, the EU consent flow and a notification icon.
+  - A credits screen from `docs/LICENSES.md`, with the exact dependency list generated from the release build.
+  - Exclude the AdMob addon's editor and sample assets from release exports: 2.4 MB of logos, a font and music that the game doesn't use (`docs/LICENSES.md`).
 - **Windows and macOS editors** need `tools/build_sim_native.sh` and `sim/aetd_sim.gdextension` extended. Do it only when someone needs it.
 
 ## Owner actions outstanding
 
 | What | Why | Where |
 | --- | --- | --- |
-| Install the newest APK from `m0-foundations`, run Sim tests and the Plugin Lab, send screenshots | Finishes M0 | `docs/PLUGINS.md` |
-| Update the build prompt's Sim core line | D-026 changed it; proposed wording is in D-026 | The owner's build prompt doc |
-| Answer Q1 to Q3 | Needed before M1's waves and lives | `docs/DECISIONS.md` |
+| Install the newest APK from `m0-foundations`. Run Sim tests and AdMob (step 1), do the one-time console setup and the other four checks (steps 2 to 7), and send screenshots (step 8). | Finishes M0 | `docs/PLUGINS.md` |
+| Until your upload key exists (step 2), uninstall the old app before installing a newer build: each build has a new throwaway key. | Android refuses to update an app signed with a different key | `docs/PLUGINS.md` step 1 |
+| Update your build prompt's Sim core line | D-026 changed it; the proposed wording is in D-026 | Your build prompt doc |
+| Answer Q1 to Q3, choose M1's 3 towers and 3 aliens, and say whether M1's field towers include upgrades and selling | Needed before M1's waves, lives and commands | `docs/DECISIONS.md` |
+| Say which phones you have | M1 must hold 60 fps on a low-end phone | Reply in the next session |
 | Q8, Gradle cache terms | Optional | `docs/DECISIONS.md` |
-
-## How to verify anything locally
-
-```sh
-python3 tools/config_tool.py validate
-python3 tools/gen_vectors.py --check
-python3 -m pytest -q tools/tests
-python3 tools/check_sim_native.py        # the C++ core, sanitizers, vectors, goldens
-```
-
-Godot tests with the library run only in CI. Read a run's results from the job logs: the worker prints one line per golden with its hash and ns per alien-tick.
