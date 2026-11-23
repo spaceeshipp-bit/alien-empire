@@ -26,7 +26,11 @@
         "enemies": { "$ref": "enemies.schema.json" },
         "counters": { "$ref": "counters.schema.json" },
         "damage": { "$ref": "damage.schema.json" },
-        "status_effects": { "$ref": "status_effects.schema.json" }
+        "status_effects": { "$ref": "status_effects.schema.json" },
+        "stages": {
+          "$ref": "stages.schema.json",
+          "description": "The PvE stages. The frozen golden bundle (sim/tests/golden) predates them and leaves them out."
+        }
       }
     }
   }

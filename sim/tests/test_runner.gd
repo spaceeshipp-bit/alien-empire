@@ -9,6 +9,7 @@ const TEST_SCRIPTS := [
 	"res://sim/tests/unit/test_lane_path.gd",
 	"res://sim/tests/unit/test_config.gd",
 	"res://sim/tests/unit/test_battle.gd",
+	"res://sim/tests/unit/test_stage.gd",
 ]
 
 

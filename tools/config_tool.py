@@ -22,11 +22,13 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
+import stages as stage_rules
+
 REPO = Path(__file__).resolve().parent.parent
 SCHEMA_DIR = REPO / "config" / "schema"
 BALANCE_DIR = REPO / "config" / "balance"
 SCHEMA_BASE = "https://schemas.alien-empire-td.invalid/"
-PARTS = ("manifest", "towers", "enemies", "counters", "damage", "status_effects")
+PARTS = ("manifest", "towers", "enemies", "counters", "damage", "status_effects", "stages")
 CLASSES = ("swarm", "armored", "shielded", "air", "cloaked", "titan")
 BUNDLE_FORMAT = 1
 # Command types the sim accepts (D-034).
@@ -158,6 +160,9 @@ def check_references(data: dict[str, Any]) -> list[str]:
     ratings = data["damage"]["counter_ratings_bp"]
     if not ratings["strong"] >= ratings["neutral"] >= ratings["weak"] >= ratings["cant_hit"] == 0:
         errors.append("damage: counter ratings must run strong >= neutral >= weak >= cant_hit, with cant_hit 0")
+
+    if "stages" in data:
+        errors += stage_rules.check_stages(data["stages"]["stages"], enemy_by_id, set(tower_by_id))
 
     return errors
 
