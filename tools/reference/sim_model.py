@@ -13,7 +13,9 @@ new rule too; check_sim_native.py refuses to compare across versions.
 Every division below works on values that can't be negative, so floor division
 is the same as the core's truncation toward zero.
 
-The rules of sim version 2. The tick counter c starts at 0; a tick does, in order:
+The rules of sim version 3 (version 2's, plus D-036's: Strongest targeting,
+calling a wave early, and the clean-wave bonus). The tick counter c starts at
+0; a tick does, in order:
 
 1. Commands. Every command for tick c, in log order. A command the state
    refuses changes nothing but adds one to the refused count:
@@ -28,6 +30,12 @@ The rules of sim version 2. The tick counter c starts at 0; a tick does, in orde
      again.
    - sell: there must be a tower on the tile. It returns everything spent on it
      x sell_refund_bp and leaves the tile.
+   - call_wave: there must be a wave that hasn't started (start > c). The
+     earliest (the lower index on a tie) starts now: every wave that hasn't
+     started moves earlier by the same number of ticks, with its unspawned
+     spawns (the rest of the plan is sorted again by tick, then plan position).
+     The player gets min(skipped ticks x call_credits_per_s x 100 // 20,
+     call_credits_max x 100).
 2. Spawns. The spawn plan is fixed at setup: groups in spec order, units in
    group order; unit n of a group spawns at first_tick + n * interval_ticks,
    plus a seeded draw from 0 to jitter_ticks when jitter_ticks > 0. Aliens
@@ -46,7 +54,9 @@ The rules of sim version 2. The tick counter c starts at 0; a tick does, in orde
    - It keeps its target if that alien is alive, hittable, in range, and c is
      before the tower's re-pick time. Otherwise it picks among every live,
      hittable alien in range the one with the least distance left to the end
-     of its path, the lower id on a tie, and sets its re-pick time to c +
+     of its path, the lower id on a tie (a Strongest tower picks the most
+     full HP plus full shield instead, the toughest kind, then the least
+     distance left, then the lower id), and sets its re-pick time to c +
      retarget_ticks. Range is the level range; in range means dx^2 + dy^2 <=
      range^2.
    - Hittable: the tower's counter rating for the alien's class isn't 0, and
@@ -73,7 +83,10 @@ The rules of sim version 2. The tick counter c starts at 0; a tick does, in orde
 6. Released aliens join, in order of death: for each, release_count aliens of
    the released type take the next ids, on the same lane and path at the same
    distance, with the dead alien's wave scaling. They move from the next tick.
-   Then the dead leave.
+   Then the dead leave. Every alien belongs to its group's wave (a released
+   one to its releaser's). A wave is done when everything it planned has
+   spawned and every one of its aliens has died or leaked; in index order,
+   each newly done wave with no leak pays clean_wave_credits.
 7. The counter rises by one. Every 100 ticks a checkpoint hash is taken, before
    the outcome is decided. The battle is lost at 0 lives; otherwise cleared when
    every planned alien has spawned and none is left; otherwise it times out when
@@ -94,7 +107,7 @@ if TOOLS not in sys.path:
     sys.path.insert(0, TOOLS)
 from gen_vectors import Rng  # noqa: E402  (the Python twin of the sim's generator)
 
-MODEL_SIM_VERSION = 2
+MODEL_SIM_VERSION = 3
 TICK_RATE = 20
 CHECKPOINT_TICKS = 100
 SHOT_CHARGE = 2000
@@ -102,7 +115,8 @@ MAX_STAT = 1_000_000_000
 CLOAKED = 4
 OUTCOMES = ("running", "cleared", "timed_out", "lost")
 RUNNING, CLEARED, TIMED_OUT, LOST = 0, 1, 2, 3
-PLACE, UPGRADE, SELL = 1, 2, 3
+PLACE, UPGRADE, SELL, CALL_WAVE = 1, 2, 3, 4
+STRONGEST = 1
 
 
 def tdiv(a: int, b: int) -> int:
@@ -164,6 +178,7 @@ class Alien:
     path: LanePath
     speed: int
     hp: int
+    max_hp: int
     shield: int
     max_shield: int
     lives: int
@@ -171,6 +186,7 @@ class Alien:
     hp_bp: int
     credits_bp: int
     last_hit: int
+    wave: int = 0
     distance: int = 0
     remainder: int = 0
     regen: int = 0
@@ -217,6 +233,7 @@ class Result:
     # What core_check's battle_reuse sees: were aliens on the field when it
     # stopped the first run (at tick 50 or later, or at the end)?
     reuse_had_aliens: bool = False
+    bot_commands: list = field(default_factory=list)
 
     def line(self) -> str:
         return result_line(self.outcome, self.ticks, self.lives, self.credits_x100, self.kills, self.leaked,
@@ -268,10 +285,13 @@ def hit_result(damage: int, rating_bp: int, cloaked: bool, unrevealed_bp: int, s
     return shield, max(damage * (10000 - reduction) // 10000, rules.min_damage_x100)
 
 
-def run(case, credits_trace: list | None = None) -> Result:
+def run(case, credits_trace: list | None = None, bot=None) -> Result:
     """Plays a battle (a tools/sim_cases.Case that the core accepts). With
     credits_trace, appends the credits (x100) at the start of every tick, before
-    its commands, for tools that plan commands (tools/wave_pressure.py)."""
+    its commands. With bot, calls bot(tick, credits_x100) at the start of every
+    tick; the commands it returns apply after the case's own for that tick, as
+    if queued live, and land in result.bot_commands. Both are for tools that
+    plan play (tools/wave_pressure.py); neither changes a rule."""
     paths = []
     for lane in case.lanes:
         ground = build_path(lane.ground)
@@ -290,6 +310,11 @@ def run(case, credits_trace: list | None = None) -> Result:
     plan.sort()
     rng_words = list(rng.s)  # nothing else draws from the generator in sim version 2
 
+    # Waves (D-036): each one's start now, its aliens not yet resolved, whether one leaked, and whether it's done.
+    starts = list(case.wave_starts)
+    pending = [sum(g.count for g in case.groups if g.wave_index == w) for w in range(len(starts))]
+    leaked_wave = [0] * len(starts)
+    done = [0] * len(starts)
     tiles = {tile: i for i, tile in enumerate(case.build_tiles)}
     on_tile: dict[tuple[int, int], int] = {}  # tile -> tower id
     aliens: list[Alien] = []
@@ -297,7 +322,7 @@ def run(case, credits_trace: list | None = None) -> Result:
     s = {"tick": 0, "next_id": 1, "next_tower": 1, "plan": 0, "cmd": 0, "spawned": 0, "leaked": 0,
          "leaked_lives": 0, "lives": case.lives, "credits": case.credits * 100, "kills": 0, "refused": 0, "updates": 0}
 
-    def new_alien(enemy_index: int, lane_index: int, hp_bp: int, credits_bp: int, distance: int) -> None:
+    def new_alien(enemy_index: int, lane_index: int, hp_bp: int, credits_bp: int, distance: int, wave: int) -> None:
         e = enemies[enemy_index]
         ground, air = paths[lane_index]
         path = air if e.air else ground
@@ -305,11 +330,12 @@ def run(case, credits_trace: list | None = None) -> Result:
             raise ValueError("an air alien needs an air route")
         a = Alien(
             id=s["next_id"], type_index=enemy_index, lane_index=lane_index, class_index=e.class_index, air=e.air,
-            path=path, speed=e.speed_mtps, hp=max(1, min(e.hp_x100 * hp_bp // 10000, MAX_STAT)),
+            path=path, speed=e.speed_mtps, hp=max(1, min(e.hp_x100 * hp_bp // 10000, MAX_STAT)), max_hp=0,
             shield=e.shield_x100, max_shield=e.shield_x100, lives=e.leak_lives,
             kill_credits=min(e.kill_credits_x100 * credits_bp // 10000, MAX_STAT), hp_bp=hp_bp, credits_bp=credits_bp,
-            last_hit=s["tick"], distance=distance,
+            last_hit=s["tick"], distance=distance, wave=wave,
         )
+        a.max_hp = a.hp
         a.x, a.y = path.position(distance)
         s["next_id"] += 1
         s["spawned"] += 1
@@ -334,6 +360,7 @@ def run(case, credits_trace: list | None = None) -> Result:
             a.dead = True
             s["credits"] += a.kill_credits
             s["kills"] += 1
+            pending[a.wave] -= 1
             if enemies[a.type_index].release_index >= 0:
                 released.append(a)
 
@@ -357,56 +384,83 @@ def run(case, credits_trace: list | None = None) -> Result:
         add(len(aliens))
         for a in aliens:
             for v in (a.id, a.type_index, a.lane_index, int(a.air), a.distance, a.remainder, a.hp, a.shield, a.x, a.y,
-                      a.regen, a.last_hit, a.kill_credits, a.hp_bp, a.credits_bp):
+                      a.regen, a.last_hit, a.kill_credits, a.hp_bp, a.credits_bp, a.wave):
+                add(v)
+        add(len(starts))
+        for w in range(len(starts)):
+            for v in (starts[w], pending[w], leaked_wave[w], done[w]):
                 add(v)
         return hashlib.sha256(bytes(out)).hexdigest()
+
+    def apply_command(cmd, c: int) -> None:
+        if cmd.kind == CALL_WAVE:
+            waiting = [w for w in range(len(starts)) if starts[w] > c]
+            if not waiting:
+                s["refused"] += 1
+                return
+            nxt = min(waiting, key=lambda w: (starts[w], w))
+            skip = starts[nxt] - c
+            for w in waiting:
+                starts[w] -= skip
+            rest = [(t - skip if grp.wave_index in waiting else t, pos, grp) for t, pos, grp in plan[s["plan"]:]]
+            plan[s["plan"]:] = sorted(rest, key=lambda e: (e[0], e[1]))
+            s["credits"] += min(skip * case.call_credits_per_s * 100 // TICK_RATE, case.call_credits_max * 100)
+            return
+        tile = (cmd.col, cmd.row)
+        assert tile in tiles, "the model only plays battles the core accepts"
+        occupant = on_tile.get(tile)
+        tower = next((t for t in towers if t.id == occupant), None)
+        if cmd.kind == PLACE:
+            cost = towers_cfg[cmd.tower_index].cost_credits * 100
+            if tower is not None or s["credits"] < cost:
+                s["refused"] += 1
+                return
+            towers.append(Tower(id=s["next_tower"], type_index=cmd.tower_index, col=cmd.col, row=cmd.row, spent=cost))
+            on_tile[tile] = s["next_tower"]
+            s["next_tower"] += 1
+            s["credits"] -= cost
+        elif cmd.kind == UPGRADE:
+            if tower is None or tower.level >= up.max_level:
+                s["refused"] += 1
+                return
+            cost = upgrade_cost(towers_cfg[tower.type_index], up, tower.level)
+            if s["credits"] < cost:
+                s["refused"] += 1
+                return
+            s["credits"] -= cost
+            tower.spent += cost
+            tower.level += 1
+        else:
+            if tower is None:
+                s["refused"] += 1
+                return
+            s["credits"] += tower.spent * up.sell_refund_bp // 10000
+            towers.remove(tower)
+            del on_tile[tile]
 
     checkpoints: list[str] = []
     outcome = RUNNING
     reuse_had_aliens = None
+    bot_log: list = []
     while outcome == RUNNING:
         c = s["tick"]
         if credits_trace is not None:
             credits_trace.append(s["credits"])
-        # 1. Commands
+        # 1. Commands: the case's for this tick, then any the bot sends
+        todo = []
         while s["cmd"] < len(case.commands) and case.commands[s["cmd"]].tick == c:
-            cmd = case.commands[s["cmd"]]
+            todo.append(case.commands[s["cmd"]])
             s["cmd"] += 1
-            tile = (cmd.col, cmd.row)
-            assert tile in tiles, "the model only plays battles the core accepts"
-            occupant = on_tile.get(tile)
-            tower = next((t for t in towers if t.id == occupant), None)
-            if cmd.kind == PLACE:
-                cost = towers_cfg[cmd.tower_index].cost_credits * 100
-                if tower is not None or s["credits"] < cost:
-                    s["refused"] += 1
-                    continue
-                towers.append(Tower(id=s["next_tower"], type_index=cmd.tower_index, col=cmd.col, row=cmd.row, spent=cost))
-                on_tile[tile] = s["next_tower"]
-                s["next_tower"] += 1
-                s["credits"] -= cost
-            elif cmd.kind == UPGRADE:
-                if tower is None or tower.level >= up.max_level:
-                    s["refused"] += 1
-                    continue
-                cost = upgrade_cost(towers_cfg[tower.type_index], up, tower.level)
-                if s["credits"] < cost:
-                    s["refused"] += 1
-                    continue
-                s["credits"] -= cost
-                tower.spent += cost
-                tower.level += 1
-            else:
-                if tower is None:
-                    s["refused"] += 1
-                    continue
-                s["credits"] += tower.spent * up.sell_refund_bp // 10000
-                towers.remove(tower)
-                del on_tile[tile]
+        if bot is not None:
+            sent = list(bot(c, s["credits"]))
+            bot_log.extend(sent)
+            todo.extend(sent)
+        for cmd in todo:
+            apply_command(cmd, c)
         # 2. Spawns
         while s["plan"] < len(plan) and plan[s["plan"]][0] <= c:
             group = plan[s["plan"]][2]
-            new_alien(group.enemy_index, group.lane_index, group.hp_bp, group.credits_bp, 0)
+            new_alien(group.enemy_index, group.lane_index, group.hp_bp, group.credits_bp, 0, group.wave_index)
             s["plan"] += 1
         s["updates"] += len(aliens)
         # 3. Moves
@@ -419,6 +473,8 @@ def run(case, credits_trace: list | None = None) -> Result:
                 s["leaked"] += 1
                 s["leaked_lives"] += a.lives
                 s["lives"] = max(0, s["lives"] - a.lives)
+                pending[a.wave] -= 1
+                leaked_wave[a.wave] = 1
                 a.dead = True  # gone from the field
             a.x, a.y = a.path.position(a.distance)
         aliens[:] = [a for a in aliens if not a.dead]
@@ -443,7 +499,11 @@ def run(case, credits_trace: list | None = None) -> Result:
                         target = kept
                 if target is None:
                     choices = [a for a in aliens if not a.dead and hittable(t, a) and in_reach(tower.x, tower.y, a, reach)]
-                    target = min(choices, key=lambda a: (a.path.length - a.distance, a.id), default=None)
+                    if t.targeting == STRONGEST:
+                        target = min(choices, key=lambda a: (-(a.max_hp + a.max_shield), a.path.length - a.distance, a.id),
+                                     default=None)
+                    else:
+                        target = min(choices, key=lambda a: (a.path.length - a.distance, a.id), default=None)
                     tower.next_pick = c + rules.retarget_ticks
                     tower.target = target.id if target else 0
                 if target is not None:
@@ -460,9 +520,16 @@ def run(case, credits_trace: list | None = None) -> Result:
         for a in released:
             e = enemies[a.type_index]
             for _ in range(e.release_count):
-                new_alien(e.release_index, a.lane_index, a.hp_bp, a.credits_bp, a.distance)
+                new_alien(e.release_index, a.lane_index, a.hp_bp, a.credits_bp, a.distance, a.wave)
+            pending[a.wave] += e.release_count
         released.clear()
         aliens[:] = [a for a in aliens if not a.dead]
+        # 6b. Waves finish, in index order: a clean one pays its bonus.
+        for w in range(len(starts)):
+            if not done[w] and pending[w] == 0:
+                done[w] = 1
+                if not leaked_wave[w]:
+                    s["credits"] += case.clean_wave_credits * 100
         # 7. The counter, checkpoints and the outcome
         s["tick"] += 1
         if s["tick"] % CHECKPOINT_TICKS == 0:
@@ -482,5 +549,5 @@ def run(case, credits_trace: list | None = None) -> Result:
         outcome=OUTCOMES[outcome], ticks=s["tick"], final_hash=state_hash(outcome), checkpoints=checkpoints,
         lives=s["lives"], credits_x100=s["credits"], kills=s["kills"], spawned=s["spawned"], leaked=s["leaked"],
         leaked_lives=s["leaked_lives"], refused=s["refused"], entity_updates=s["updates"],
-        reuse_had_aliens=reuse_had_aliens,
+        reuse_had_aliens=reuse_had_aliens, bot_commands=bot_log,
     )

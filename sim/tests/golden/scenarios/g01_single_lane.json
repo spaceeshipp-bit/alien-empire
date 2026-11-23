@@ -6,6 +6,9 @@
   "lives": 1000000,
   "credits": 0,
   "towers": [],
+  "call_credits_per_s": 0,
+  "call_credits_max": 0,
+  "clean_wave_credits": 0,
   "map": {
     "lanes": [
       {

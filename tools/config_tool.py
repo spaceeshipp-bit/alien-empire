@@ -32,7 +32,7 @@ PARTS = ("manifest", "towers", "enemies", "counters", "damage", "status_effects"
 CLASSES = ("swarm", "armored", "shielded", "air", "cloaked", "titan")
 BUNDLE_FORMAT = 1
 # Command types the sim accepts (D-034).
-KNOWN_COMMANDS: frozenset[str] = frozenset({"place", "upgrade", "sell"})
+KNOWN_COMMANDS: frozenset[str] = frozenset({"place", "upgrade", "sell", "call_wave"})
 MS_PER_TICK = 50
 
 
@@ -253,6 +253,8 @@ def check_battle(spec: dict[str, Any], data: dict[str, Any]) -> list[str]:
             continue
         if command["tick"] > last_tick:
             errors.append(f"{where}: tick {command['tick']} is at or after the battle's last tick")
+        if command["type"] == "call_wave":
+            continue
         if tuple(command["args"]["tile"]) not in set(tiles):
             errors.append(f"{where}: {command['args']['tile']} isn't a build tile")
         if command["type"] == "place" and command["args"]["tower"] not in spec["towers"]:

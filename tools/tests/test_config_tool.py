@@ -139,6 +139,9 @@ def minimal_battle():
         "lives": 20,
         "credits": 300,
         "towers": ["pulse_turret"],
+        "call_credits_per_s": 1,
+        "call_credits_max": 15,
+        "clean_wave_credits": 10,
         "map": {"lanes": [{"id": "a", "ground": [[0, 0], [0, 5000]]}], "build_tiles": [[1, 2]]},
         "waves": [
             {

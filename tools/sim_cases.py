@@ -37,7 +37,8 @@ CLASSES = ("swarm", "armored", "shielded", "air", "cloaked", "titan")
 # Abilities sim version 2 runs (D-034). The towers' slow, reveal and mark arrive in M2.
 SUPPORTED_TOWER_ABILITIES: frozenset[str] = frozenset()
 SUPPORTED_ENEMY_ABILITIES = frozenset({"spawn_on_death"})
-KINDS = {"place": 1, "upgrade": 2, "sell": 3}
+KINDS = {"place": 1, "upgrade": 2, "sell": 3, "call_wave": 4}
+TARGETING = {"first": 0, "strongest": 1}
 
 
 @dataclass(frozen=True)
@@ -68,6 +69,7 @@ class Tower:
     rating_bp: tuple[int, ...]  # one per class, in CLASSES order
     unrevealed_bp: int
     supported: bool = True
+    targeting: int = 0  # 0 first, 1 strongest
 
 
 @dataclass(frozen=True)
@@ -115,6 +117,7 @@ class Group:
     jitter_ticks: int
     hp_bp: int = 10000
     credits_bp: int = 10000
+    wave_index: int = 0
 
 
 @dataclass(frozen=True)
@@ -136,6 +139,10 @@ class Case:
     tower_set: tuple[int, ...] = ()
     build_tiles: tuple[tuple[int, int], ...] = ()
     commands: tuple[Command, ...] = ()
+    wave_starts: tuple[int, ...] = ()
+    call_credits_per_s: int = 0
+    call_credits_max: int = 0
+    clean_wave_credits: int = 0
     # False for a case built to break one of the core's limits; the core must refuse it.
     valid: bool = True
     profile: str = "spec"
@@ -170,6 +177,7 @@ def resolve_tower(bundle: dict, tower: dict) -> Tower:
         damage["shield_multipliers_bp"].get(tower["damage_type"], 10000), tower["armor_pierce_bp"], ratings,
         row.get("cloaked", {}).get("unrevealed_damage_bp", 0),
         all(a["type"] in SUPPORTED_TOWER_ABILITIES for a in tower["abilities"]),
+        TARGETING[tower.get("targeting", "first")],
     )
 
 
@@ -203,18 +211,18 @@ def case_from_spec(bundle: dict, spec: dict, name: str = "") -> Case:
     tower_index = {t["id"]: i for i, t in enumerate(towers)}
     lane_ids = [lane["id"] for lane in spec["map"]["lanes"]]
     groups = []
-    for wave in spec["waves"]:
+    for w, wave in enumerate(spec["waves"]):
         start = ticks(wave["start_ms"])
         for g in wave["groups"]:
             groups.append(Group(
                 index[g["enemy"]], lane_ids.index(g["lane"]), g["count"],
                 start + ticks(g["offset_ms"]), ticks(g["interval_ms"]), ticks(g["jitter_ms"]),
-                wave["hp_bp"], wave["credits_bp"],
+                wave["hp_bp"], wave["credits_bp"], w,
             ))
     commands = []
     for c in spec["commands"]:
         kind = KINDS[c["type"]]
-        col, row = c["args"]["tile"]
+        col, row = c["args"]["tile"] if kind != 4 else (0, 0)
         commands.append(Command(c["tick"], kind, tower_index[c["args"]["tower"]] if kind == 1 else -1, col, row))
     upgrades, rules = bundle_rules(bundle)
     return Case(
@@ -238,6 +246,10 @@ def case_from_spec(bundle: dict, spec: dict, name: str = "") -> Case:
         tower_set=tuple(tower_index[t] for t in spec["towers"]),
         build_tiles=tuple(tuple(t) for t in spec["map"]["build_tiles"]),
         commands=tuple(commands),
+        wave_starts=tuple(ticks(w["start_ms"]) for w in spec["waves"]),
+        call_credits_per_s=spec["call_credits_per_s"],
+        call_credits_max=spec["call_credits_max"],
+        clean_wave_credits=spec["clean_wave_credits"],
     )
 
 
@@ -250,13 +262,16 @@ def driver_lines(case: Case) -> list[str]:
     for t in case.towers:
         lines.append(" ".join(str(v) for v in (
             "tower", t.cost_credits, t.damage_x100, t.shots_per_s_x100, t.range_mt, t.splash_mt, t.shield_mult_bp,
-            t.pierce_bp, *t.rating_bp, t.unrevealed_bp, int(t.supported))))
+            t.pierce_bp, *t.rating_bp, t.unrevealed_bp, t.targeting, int(t.supported))))
     u, r = case.upgrades, case.rules
     lines.append(f"upgrades {u.max_level} {u.first_upgrade_cost_bp} {u.cost_growth_bp} {u.damage_growth_bp} "
                  f"{u.range_step_bp} {u.sell_refund_bp}")
     lines.append(f"damage {r.armor_constant} {r.max_reduction_bp} {r.min_damage_x100}")
     lines.append(f"timing {r.regen_per_second_x100} {r.regen_delay_ticks} {r.retarget_ticks}")
-    lines.append(f"spec {case.battle_id} {case.seed} {case.max_ticks} {case.lives} {case.credits}")
+    lines.append(f"spec {case.battle_id} {case.seed} {case.max_ticks} {case.lives} {case.credits} "
+                 f"{case.call_credits_per_s} {case.call_credits_max} {case.clean_wave_credits}")
+    for start in case.wave_starts:
+        lines.append(f"wave {start}")
     lines.append(" ".join(["towerset", str(len(case.tower_set)), *(str(i) for i in case.tower_set)]))
     for col, row in case.build_tiles:
         lines.append(f"tile {col} {row}")
@@ -268,7 +283,7 @@ def driver_lines(case: Case) -> list[str]:
         lines.append(" ".join(parts))
     for g in case.groups:
         lines.append(f"group {g.enemy_index} {g.lane_index} {g.count} {g.first_tick} {g.interval_ticks} {g.jitter_ticks} "
-                     f"{g.hp_bp} {g.credits_bp}")
+                     f"{g.hp_bp} {g.credits_bp} {g.wave_index}")
     for c in case.commands:
         lines.append(f"command {c.tick} {c.kind} {c.tower_index} {c.col} {c.row}")
     return lines
@@ -362,6 +377,7 @@ def _random_bundle(rnd: random.Random) -> dict:
             "damage_type": rnd.choice(damage_types),
             "armor_pierce_bp": rnd.choice((0, 7500, 10000, rnd.randint(0, 10000))),
             "abilities": [{"type": "slow", "slow_bp": 2000}] if rnd.random() < 0.15 else [],
+            "targeting": rnd.choice(("first", "strongest")),
         })
         counters[tid] = {c: {"rating": rnd.choice(("strong", "neutral", "weak", "cant_hit"))} for c in CLASSES}
         counters[tid]["cloaked"]["unrevealed_damage_bp"] = rnd.choice((0, 5000, 10000, bp(0, CORE_MAX_MULT_BP)))
@@ -547,8 +563,15 @@ def random_spec(rnd: random.Random, bundle: dict, profile: str, battle_id: str) 
                 commands.append({"tick": tick, "type": "upgrade", "args": {"tile": tile}})
             else:
                 commands.append({"tick": tick, "type": "sell", "args": {"tile": tile}})
+    # Now and then the player calls a wave early (D-036), sometimes when none is left.
+    for _ in range(rnd.choice((0, 0, 1, 2, 4))):
+        commands.append({"tick": rnd.randint(0, min(last_tick, rnd.choice((100, 1200, 4000)))), "type": "call_wave", "args": {}})
+    commands.sort(key=lambda c: c["tick"])  # stable: same-tick commands keep their order
     return {
         "battle_id": battle_id, "mode": "pve", "seed": _seed(rnd), "max_ms": max_ms,
+        "call_credits_per_s": rnd.choice((0, 1, 1, 3)) if not edges else rnd.choice((0, MAX_STAT)),
+        "call_credits_max": rnd.choice((0, 15, 15, 100)) if not edges else rnd.choice((0, 1, MAX_STAT)),
+        "clean_wave_credits": rnd.choice((0, 10, 25)) if not edges else rnd.choice((0, MAX_STAT)),
         "lives": rnd.choice((1, 3, 20, 20, 50, MAX_STAT)) if edges else rnd.choice((5, 20, 20, 100, 1000)),
         "credits": (rnd.choice((0, 1, MAX_STAT)) if edges else
                     rnd.choice((300, 2000, 5000, 100_000)) if combat else rnd.choice((0, 300, 500, 2000, 2000, 100_000))),
@@ -667,6 +690,31 @@ def _break_group_scale(rnd: random.Random, case: Case) -> Case:
     return dataclasses.replace(case, groups=tuple(groups), broken=f"group {g} {stat}")
 
 
+def _break_waves(rnd: random.Random, case: Case) -> Case:
+    """Sim version 3's inputs: waves, calls, bonuses and targeting (D-036)."""
+    roll = rnd.randrange(6)
+    groups = list(case.groups)
+    g = rnd.randrange(len(groups))
+    if roll == 0:
+        groups[g] = dataclasses.replace(groups[g], wave_index=rnd.choice((-1, len(case.wave_starts))))
+        return dataclasses.replace(case, groups=tuple(groups), broken=f"group {g} unknown wave")
+    if roll == 1 and case.wave_starts[groups[g].wave_index] > 0:
+        groups[g] = dataclasses.replace(groups[g], first_tick=case.wave_starts[groups[g].wave_index] - 1)
+        return dataclasses.replace(case, groups=tuple(groups), broken=f"group {g} before its wave")
+    if roll == 2:
+        return dataclasses.replace(case, wave_starts=case.wave_starts + (0,), broken="a wave with no group")
+    if roll == 3:
+        bad = Command(0, 4, -1, 1, 0)
+        return dataclasses.replace(case, commands=(bad,) + case.commands, broken="call_wave with a tile")
+    if roll == 4 and case.towers:
+        towers = list(case.towers)
+        i = rnd.randrange(len(towers))
+        towers[i] = dataclasses.replace(towers[i], targeting=rnd.choice((-1, 2)))
+        return dataclasses.replace(case, towers=tuple(towers), broken=f"tower {i} targeting")
+    field = rnd.choice(("call_credits_per_s", "call_credits_max", "clean_wave_credits"))
+    return dataclasses.replace(case, **{field: rnd.choice((-1, MAX_STAT + 1))}, broken=field)
+
+
 def _break_command(rnd: random.Random, case: Case) -> Case:
     """A command no loader would pass: the core must refuse the whole battle."""
     tiles = case.build_tiles or ((0, 0),)
@@ -727,7 +775,7 @@ def _break_release(rnd: random.Random, case: Case) -> Case:
 
 
 _BREAK_M1 = (_break_tower, _break_rules, _break_spec, _break_group_scale, _break_command, _break_command,
-             _break_unsupported, _break_release)
+             _break_unsupported, _break_release, _break_waves, _break_waves)
 
 
 def random_case(seed: int, index: int, frozen_bundle: dict) -> Case:

@@ -85,7 +85,8 @@
       "additionalProperties": false,
       "required": [
         "id", "width", "height", "core", "lanes", "build_tiles", "lives", "credits", "towers",
-        "hp_growth_bp", "credit_growth_bp", "max_ms", "waves", "reference_layout"
+        "hp_growth_bp", "credit_growth_bp", "call_credits_per_s", "call_credits_max", "clean_wave_credits",
+        "max_ms", "waves", "reference_layout"
       ],
       "properties": {
         "id": { "$ref": "common.schema.json#/$defs/id" },
@@ -124,6 +125,9 @@
           "maximum": 100000,
           "description": "Kill credits grow by this factor per wave: the build prompt's x1.03 is 10300."
         },
+        "call_credits_per_s": { "type": "integer", "minimum": 0, "description": "Credits a second skipped when the player calls the next wave early (D-036)." },
+        "call_credits_max": { "type": "integer", "minimum": 0, "description": "The most one early call pays." },
+        "clean_wave_credits": { "type": "integer", "minimum": 0, "description": "Paid for a wave that dies with no leak (D-036)." },
         "max_ms": { "$ref": "common.schema.json#/$defs/ms", "minimum": 50, "description": "A hard stop well after the last wave." },
         "waves": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/wave" } },
         "reference_layout": {

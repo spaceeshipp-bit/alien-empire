@@ -257,6 +257,7 @@ void SimNativeBattle::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_credits_x100"), &SimNativeBattle::get_credits_x100);
 	ClassDB::bind_method(D_METHOD("get_kills"), &SimNativeBattle::get_kills);
 	ClassDB::bind_method(D_METHOD("get_refused_commands"), &SimNativeBattle::get_refused_commands);
+	ClassDB::bind_method(D_METHOD("get_wave_starts"), &SimNativeBattle::get_wave_starts);
 	ClassDB::bind_method(D_METHOD("get_towers"), &SimNativeBattle::get_towers);
 	ClassDB::bind_method(D_METHOD("get_alien_view"), &SimNativeBattle::get_alien_view);
 	ClassDB::bind_method(D_METHOD("get_events"), &SimNativeBattle::get_events);
@@ -310,6 +311,7 @@ bool SimNativeBattle::setup(const Dictionary &config, const Dictionary &spec) {
 		}
 		t.unrevealed_bp = r.get_int(d, "unrevealed_bp", where);
 		t.supported = r.get_bool(d, "supported", where);
+		t.targeting = r.get_int(d, "targeting", where);
 		c.towers.push_back(t);
 	}
 	const Dictionary up = r.has(config, "upgrades", Variant::DICTIONARY, "config") ? as<Dictionary>(config["upgrades"]) : Dictionary();
@@ -331,6 +333,10 @@ bool SimNativeBattle::setup(const Dictionary &config, const Dictionary &spec) {
 	s.max_ticks = r.get_int(spec, "max_ticks", "spec");
 	s.lives = r.get_int(spec, "lives", "spec");
 	s.credits = r.get_int(spec, "credits", "spec");
+	s.wave_starts = to_vector(r.get_ints(spec, "wave_starts", "spec"));
+	s.call_credits_per_s = r.get_int(spec, "call_credits_per_s", "spec");
+	s.call_credits_max = r.get_int(spec, "call_credits_max", "spec");
+	s.clean_wave_credits = r.get_int(spec, "clean_wave_credits", "spec");
 	s.tower_set = to_vector(r.get_ints(spec, "tower_set", "spec"));
 	const PackedInt64Array tiles = r.get_ints(spec, "build_tiles", "spec");
 	if (tiles.size() % 2 != 0) {
@@ -365,6 +371,7 @@ bool SimNativeBattle::setup(const Dictionary &config, const Dictionary &spec) {
 		g.jitter_ticks = r.get_int(d, "jitter_ticks", where);
 		g.hp_bp = r.get_int(d, "hp_bp", where);
 		g.credits_bp = r.get_int(d, "credits_bp", where);
+		g.wave_index = r.get_int(d, "wave_index", where);
 		s.groups.push_back(g);
 	}
 	const Array commands = r.get_array(spec, "commands", "spec");
@@ -512,6 +519,10 @@ PackedInt64Array SimNativeBattle::get_alien_view() const {
 		*w++ = a.max_shield_x100;
 	}
 	return out;
+}
+
+PackedInt64Array SimNativeBattle::get_wave_starts() const {
+	return to_packed(battle.wave_starts);
 }
 
 PackedInt64Array SimNativeBattle::get_events() const {

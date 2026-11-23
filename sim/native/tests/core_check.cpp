@@ -114,7 +114,7 @@ int main() {
 			for (auto &rating : t.rating_bp) {
 				in >> rating;
 			}
-			in >> t.unrevealed_bp >> supported;
+			in >> t.unrevealed_bp >> t.targeting >> supported;
 			t.supported = supported != 0;
 			config.towers.push_back(t);
 		} else if (cmd == "upgrades") {
@@ -126,7 +126,12 @@ int main() {
 		} else if (cmd == "timing") {
 			in >> config.regen_per_second_x100 >> config.regen_delay_ticks >> config.retarget_ticks;
 		} else if (cmd == "spec") {
-			in >> spec.battle_id >> spec.seed >> spec.max_ticks >> spec.lives >> spec.credits;
+			in >> spec.battle_id >> spec.seed >> spec.max_ticks >> spec.lives >> spec.credits >> spec.call_credits_per_s >>
+					spec.call_credits_max >> spec.clean_wave_credits;
+		} else if (cmd == "wave") {
+			int64_t start;
+			in >> start;
+			spec.wave_starts.push_back(start);
 		} else if (cmd == "towerset") {
 			int64_t n;
 			in >> n;
@@ -158,7 +163,7 @@ int main() {
 		} else if (cmd == "group") {
 			SpawnGroup g;
 			in >> g.enemy_index >> g.lane_index >> g.count >> g.first_tick >> g.interval_ticks >> g.jitter_ticks >> g.hp_bp >>
-					g.credits_bp;
+					g.credits_bp >> g.wave_index;
 			spec.groups.push_back(g);
 		} else if (cmd == "battle_run") {
 			Battle battle;

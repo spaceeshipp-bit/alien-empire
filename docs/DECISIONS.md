@@ -321,6 +321,90 @@ Every design or technical decision, with its date, the options considered and th
 - **Reason:** the paper reading of wave pressure is kinder than the sim. It counts every covered tile as a kill zone, spends every credit perfectly and ignores splash. A last wave enlarged to a paper 0.8 wipes the reference builder; about 0.6 is the most a paid-for layout survives. Today the last wave reads 0.59. The bot gates test what the target is for: a stage that a sensible build clears with lives to spare, where counters matter. The playthrough here cleared at 396 s with 10 of 20 lives, 288 kills and 6 leaks; Pulse-only lost at 388 s.
 - **Owner question:** M1's done-when says wave pressure is within target. The proposed wording: "0.4 to 0.6 on early waves by the formula; the last wave as hard as a sensible build survives, shown by the reference builder clearing with 10 to 16 of 20 lives while a one-tower build loses." The design review also proposes measuring pressure in the sim instead of on paper.
 
+### D-036 · 2026-11-23 · The combat rules of sim version 3: targeting, calling a wave, the clean-wave bonus
+
+- **Decision:** version 2's rules (D-034) plus three, approved by the owner (D-038), as `tools/reference/sim_model.py` states them in full:
+  - **Targeting:** each tower type names its rule in `towers.json`.
+    - **First** is unchanged: the least distance left to the Core.
+    - **Strongest** picks the toughest kind: the most full HP plus full shield, the wave's HP growth included. Ties go to the least distance left, then the lower id.
+    - The Railgun uses Strongest; the other towers use First. M2 lets the player choose per tower, among the build prompt's four rules.
+  - **Calling a wave:** a `call_wave` command, with no tile. The earliest wave that hasn't started starts now, and every later wave moves sooner by the same number of ticks.
+    - It pays `call_credits_per_s` for each second skipped, at most `call_credits_max` (counted in ticks: skipped × per second × 100 ÷ 20, truncated).
+    - With no wave left to call, it's refused and counted like any other refusal.
+  - **Clean waves:** a wave is done when everything it planned has spawned and every one of its aliens, released ones included, has died or leaked. Waves finish in index order, and a wave with no leak pays `clean_wave_credits`.
+  - **Spec and hash:**
+    - The spec adds the three bonus fields; the stage sets them.
+    - The hash adds each alien's wave and each wave's start, pending count, leak flag and done flag.
+    - New events: `WAVE_DONE` (the wave, clean or not) and `CALLED` (the wave, the bonus).
+  - `SIM_VERSION` 3. The goldens are re-recorded through CI (D-008).
+- **Options:**
+  - Strongest by what's left of HP and shield;
+  - a call that moves only the next wave;
+  - a fixed call bonus;
+  - a clean bonus that grows with the wave's size.
+- **Reason:**
+  - **Strongest by full values:** ranked by HP left, a Railgun's hit makes its target the weakest, so its next shot goes to a fresh alien. Against a pack of 8 Swarmers it killed none, as measured. Ranked by full values, it finishes what it starts and still turns to a Brute over a Swarmer.
+  - **Moving every later wave:** keeps the stage's rhythm. Moving only the next wave would bunch it into the one after.
+  - **Paying per second skipped:** rewards the risk the player takes. The cap keeps calling a choice, not a farm. In testing, a bot that called every wave the moment the field cleared finished the stage in 220 s instead of 383 s, with 8 lives left instead of 14.
+  - **A flat clean bonus:** small and easy to read.
+  - **Checks:** each rule is tested in the model (`tools/tests/test_sim_model.py`) and in GDScript (`sim/tests/unit/test_battle.gd`). The fuzz compares the core with the model on generated battles that call waves.
+
+### D-037 · 2026-11-23 · Landfall 01 rebuilt: 13 pads, hairpins, the Plasma Torch at 2.2 tiles, waves of packs
+
+- **Decision:**
+  - **Map:**
+    - 13 build tiles, down from 20.
+    - Each lane bends into two hairpins, with a pad inside each that sees three sides of the lane.
+    - The two pads next to the Core cover both lane ends.
+    - Both air routes fly straight down the middle, 37% shorter than the ground lanes.
+  - **Plasma Torch:** range 2.2 tiles, up from the build prompt's 1.8 (approved, D-038). From inside a hairpin it covers about 8 tiles of lane.
+  - **Waves:**
+    - Swarmers come in tight packs, 0.15 s apart.
+    - Each wave sends three to eight packs over 18 to 30 s, so a Torch's splash pays.
+    - The pack size grows from 4 to 16.
+    - Brutes close waves 5 and 7, on a lane where the next wave can't catch them before they reach the Core, and come in pairs in waves 9 and 10.
+    - Skimmers come in small numbers: 2, 3, 3 and 5.
+  - **Kill credits:** 5 per Swarmer, up from 4. The other kill credits and the starting credits are unchanged.
+  - **Reference layout:** the order in which a sensible player buys: a Torch in each lane's first hairpin, Pulse Turrets in the center for the air, a Railgun in the center, Torches in the second hairpins, Pulse Turrets by the Core, then two more Railguns.
+- **Results** (`tools/wave_pressure.py --check`, in CI):
+  - Waves 1 to 3 read 0.48, 0.51 and 0.54.
+  - The reference builder clears with 14 of 20 lives. Its only leaks are in waves 9 and 10.
+  - Pulse-only loses at 206 s.
+  - **Each counter matters:**
+    - Torch-only loses, and so does a build without a Railgun or without a Torch.
+    - A build with no anti-air clears with 7 lives.
+  - **Three stars are reachable:** a short search over build orders found a no-leak build.
+  - **The tuning is robust:** all 27 variants of starting credits (275, 300, 325), clean bonus (0, 15, 30) and pack size (×0.9, 1.0, 1.1) clear, and 24 of them with 10 to 16 lives.
+- **Options:**
+  - D-035's streams of single Swarmers. On this map the reference builder lost by 76 s: a stream gives splash nothing to hit, and one Torch kills 2 of 8 Swarmers spaced 1.2 s apart.
+  - Bigger packs early: one Torch is at its limit, and a single early leak costs a kill and the clean bonus, so the builder falls behind for the rest of the stage.
+  - Brutes leading packs. A slow Brute in front draws every First tower while the pack behind runs past: 3 of 8 die instead of 7 of 7. That's a good twist for a later stage, not for the stage that introduces the Brute.
+  - Upgrades early in the reference build: with pads still free, a new tower buys more than an upgrade (the build prompt's own math), and the builder did worse.
+- **Reason:**
+  - The build prompt asks for Swarmer packs of 8 to 30 and a Torch that counters them.
+  - Several packs spread over a wave keep the build prompt's pressure formula in its band while splash does its job.
+  - Each wave was tuned to leave the reference builder a margin: HP could rise 22% to 106% in waves 1 to 7 before it leaked, and the squeeze is saved for the last three.
+
+### D-038 · 2026-11-23 · The owner's answers to the design review
+
+- **Decision:** the owner approved every recommendation on 2026-11-23 ("go with all your recommendations"):
+  1. **The done-when wording (D-035):** "0.4 to 0.6 on early waves by the formula; the last wave as hard as a sensible build survives, shown by the reference builder clearing with 10 to 16 of 20 lives while a one-tower build loses."
+  2. **Targeting:** the Railgun defaults to Strongest, and each tower has a default of its own (D-036).
+  3. **Calling a wave:** the next wave can be called early for 1 credit per second skipped, at most 15 (D-036).
+  4. **Clean waves:** a small bonus for a wave with no leak, 15 credits (D-036).
+  5. **The map:** about 12 or 13 pads, with a hairpin per lane (D-037).
+  6. **The Plasma Torch:** range 2.2 tiles (D-037).
+  7. **Stars:** hard to max. Three stars need 90% of lives kept (18 of 20). Hard and Nightmare modes unlock later.
+  8. **Base building in M3:** buildings that visibly grow, builder drones, raid scars to repair, a colony log and a coverage overlay (`docs/DESIGN_REVIEW.md`, section 3).
+  9. **Mini-games:**
+     - Red Team and Par Drills come first, and the Specimen Bench is a tutorial. Salvage Sweep is dropped.
+     - Mini-games pay a small daily amount out of the existing daily reward budget, never on top of it.
+- **Build prompt:** items 2, 3, 4, 6 and 9 depart from the build prompt. The owner's copy changes first (working rule 4). Proposed wording:
+  - **Towers:** "Each tower has a default targeting rule: the Railgun Strongest, the rest First."
+  - **Waves:** "The player may call the next wave early for 1 credit per second skipped, at most 15. A wave cleared with no leak pays 15 credits."
+  - **Starting tower stats:** the Plasma Torch's range of 2.2 tiles.
+  - **Base:** the mini-game list above, with its reward rule.
+
 ## Open questions for the owner
 
 | # | Question | Current default | Needed by |

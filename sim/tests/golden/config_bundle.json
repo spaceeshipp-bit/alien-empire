@@ -1,5 +1,5 @@
 {
-  "config_hash": "e31fb616ac30478d56a550c90547ff9bc8582d73cedf224e274a9defa789bd7a",
+  "config_hash": "fb2a5abb6d64ca528e73a4d5e5e30bbe1333688efb3cf24da73d5faa331f147f",
   "data": {
     "counters": {
       "counters": {
@@ -139,7 +139,7 @@
           "class": "swarm",
           "hp_x100": 4000,
           "id": "swarmer",
-          "kill_credits_x100": 300,
+          "kill_credits_x100": 400,
           "leak_lives": 1,
           "movement": "ground",
           "shield_x100": 0,
@@ -151,7 +151,7 @@
           "class": "armored",
           "hp_x100": 36000,
           "id": "carapace_brute",
-          "kill_credits_x100": 2500,
+          "kill_credits_x100": 3000,
           "leak_lives": 3,
           "movement": "ground",
           "shield_x100": 0,
@@ -175,7 +175,7 @@
           "class": "air",
           "hp_x100": 8000,
           "id": "skimmer",
-          "kill_credits_x100": 800,
+          "kill_credits_x100": 1000,
           "leak_lives": 1,
           "movement": "air",
           "shield_x100": 0,
@@ -214,9 +214,500 @@
       ]
     },
     "manifest": {
-      "config_version": 2,
-      "label": "M1: kill credits and tower retargeting added to the M0 baseline",
-      "schema_version": 2
+      "config_version": 3,
+      "label": "M1: tower targeting, the Plasma Torch at 2.2 tiles, early calls and clean-wave bonuses",
+      "schema_version": 3
+    },
+    "stages": {
+      "stages": [
+        {
+          "build_tiles": [
+            [
+              4,
+              1
+            ],
+            [
+              2,
+              4
+            ],
+            [
+              6,
+              4
+            ],
+            [
+              4,
+              5
+            ],
+            [
+              2,
+              7
+            ],
+            [
+              6,
+              7
+            ],
+            [
+              0,
+              7
+            ],
+            [
+              8,
+              7
+            ],
+            [
+              4,
+              8
+            ],
+            [
+              2,
+              11
+            ],
+            [
+              6,
+              11
+            ],
+            [
+              3,
+              13
+            ],
+            [
+              5,
+              13
+            ]
+          ],
+          "call_credits_max": 15,
+          "call_credits_per_s": 1,
+          "clean_wave_credits": 15,
+          "core": [
+            4,
+            14
+          ],
+          "credit_growth_bp": 10300,
+          "credits": 300,
+          "height": 16,
+          "hp_growth_bp": 10900,
+          "id": "landfall_01",
+          "lanes": [
+            {
+              "air": [
+                [
+                  4500,
+                  0
+                ],
+                [
+                  4500,
+                  13500
+                ]
+              ],
+              "ground": [
+                [
+                  500,
+                  0
+                ],
+                [
+                  500,
+                  3500
+                ],
+                [
+                  3500,
+                  3500
+                ],
+                [
+                  3500,
+                  5500
+                ],
+                [
+                  1500,
+                  5500
+                ],
+                [
+                  1500,
+                  9500
+                ],
+                [
+                  3500,
+                  9500
+                ],
+                [
+                  3500,
+                  12500
+                ],
+                [
+                  4500,
+                  12500
+                ],
+                [
+                  4500,
+                  13500
+                ]
+              ],
+              "id": "west"
+            },
+            {
+              "air": [
+                [
+                  4500,
+                  0
+                ],
+                [
+                  4500,
+                  13500
+                ]
+              ],
+              "ground": [
+                [
+                  8500,
+                  0
+                ],
+                [
+                  8500,
+                  3500
+                ],
+                [
+                  5500,
+                  3500
+                ],
+                [
+                  5500,
+                  5500
+                ],
+                [
+                  7500,
+                  5500
+                ],
+                [
+                  7500,
+                  9500
+                ],
+                [
+                  5500,
+                  9500
+                ],
+                [
+                  5500,
+                  12500
+                ],
+                [
+                  4500,
+                  12500
+                ],
+                [
+                  4500,
+                  13500
+                ]
+              ],
+              "id": "east"
+            }
+          ],
+          "lives": 20,
+          "max_ms": 600000,
+          "reference_layout": [
+            {
+              "tile": [
+                4,
+                1
+              ],
+              "tower": "pulse_turret"
+            },
+            {
+              "tile": [
+                2,
+                4
+              ],
+              "tower": "plasma_torch"
+            },
+            {
+              "tile": [
+                6,
+                4
+              ],
+              "tower": "plasma_torch"
+            },
+            {
+              "tile": [
+                4,
+                5
+              ],
+              "tower": "railgun"
+            },
+            {
+              "tile": [
+                4,
+                8
+              ],
+              "tower": "pulse_turret"
+            },
+            {
+              "tile": [
+                2,
+                7
+              ],
+              "tower": "plasma_torch"
+            },
+            {
+              "tile": [
+                6,
+                7
+              ],
+              "tower": "plasma_torch"
+            },
+            {
+              "tile": [
+                2,
+                11
+              ],
+              "tower": "railgun"
+            },
+            {
+              "tile": [
+                3,
+                13
+              ],
+              "tower": "pulse_turret"
+            },
+            {
+              "tile": [
+                5,
+                13
+              ],
+              "tower": "pulse_turret"
+            },
+            {
+              "tile": [
+                6,
+                11
+              ],
+              "tower": "railgun"
+            }
+          ],
+          "towers": [
+            "pulse_turret",
+            "plasma_torch",
+            "railgun"
+          ],
+          "waves": [
+            {
+              "groups": [
+                {
+                  "count": 18,
+                  "enemy": "swarmer",
+                  "interval_ms": 1200,
+                  "lane": "west",
+                  "offset_ms": 0
+                }
+              ],
+              "start_ms": 10000
+            },
+            {
+              "groups": [
+                {
+                  "count": 22,
+                  "enemy": "swarmer",
+                  "interval_ms": 1000,
+                  "lane": "east",
+                  "offset_ms": 0
+                }
+              ],
+              "start_ms": 46000
+            },
+            {
+              "groups": [
+                {
+                  "count": 14,
+                  "enemy": "swarmer",
+                  "interval_ms": 1600,
+                  "lane": "west",
+                  "offset_ms": 0
+                },
+                {
+                  "count": 14,
+                  "enemy": "swarmer",
+                  "interval_ms": 1600,
+                  "lane": "east",
+                  "offset_ms": 800
+                }
+              ],
+              "start_ms": 82000
+            },
+            {
+              "groups": [
+                {
+                  "count": 5,
+                  "enemy": "skimmer",
+                  "interval_ms": 4000,
+                  "lane": "west",
+                  "offset_ms": 0
+                },
+                {
+                  "count": 14,
+                  "enemy": "swarmer",
+                  "interval_ms": 1200,
+                  "lane": "east",
+                  "offset_ms": 6000
+                }
+              ],
+              "start_ms": 118000
+            },
+            {
+              "groups": [
+                {
+                  "count": 20,
+                  "enemy": "swarmer",
+                  "interval_ms": 1000,
+                  "lane": "east",
+                  "offset_ms": 0
+                },
+                {
+                  "count": 1,
+                  "enemy": "carapace_brute",
+                  "interval_ms": 0,
+                  "lane": "west",
+                  "offset_ms": 18000
+                }
+              ],
+              "start_ms": 154000
+            },
+            {
+              "groups": [
+                {
+                  "count": 20,
+                  "enemy": "swarmer",
+                  "interval_ms": 500,
+                  "lane": "west",
+                  "offset_ms": 0
+                },
+                {
+                  "count": 20,
+                  "enemy": "swarmer",
+                  "interval_ms": 500,
+                  "lane": "east",
+                  "offset_ms": 11000
+                }
+              ],
+              "start_ms": 190000
+            },
+            {
+              "groups": [
+                {
+                  "count": 6,
+                  "enemy": "skimmer",
+                  "interval_ms": 3000,
+                  "lane": "west",
+                  "offset_ms": 0
+                },
+                {
+                  "count": 16,
+                  "enemy": "swarmer",
+                  "interval_ms": 1200,
+                  "lane": "west",
+                  "offset_ms": 2000
+                },
+                {
+                  "count": 2,
+                  "enemy": "carapace_brute",
+                  "interval_ms": 10000,
+                  "lane": "east",
+                  "offset_ms": 12000
+                }
+              ],
+              "start_ms": 226000
+            },
+            {
+              "groups": [
+                {
+                  "count": 16,
+                  "enemy": "swarmer",
+                  "interval_ms": 1000,
+                  "lane": "west",
+                  "offset_ms": 0
+                },
+                {
+                  "count": 16,
+                  "enemy": "swarmer",
+                  "interval_ms": 1000,
+                  "lane": "east",
+                  "offset_ms": 9000
+                },
+                {
+                  "count": 3,
+                  "enemy": "skimmer",
+                  "interval_ms": 5000,
+                  "lane": "east",
+                  "offset_ms": 4000
+                }
+              ],
+              "start_ms": 262000
+            },
+            {
+              "groups": [
+                {
+                  "count": 18,
+                  "enemy": "swarmer",
+                  "interval_ms": 1000,
+                  "lane": "east",
+                  "offset_ms": 0
+                },
+                {
+                  "count": 1,
+                  "enemy": "carapace_brute",
+                  "interval_ms": 0,
+                  "lane": "west",
+                  "offset_ms": 8000
+                },
+                {
+                  "count": 1,
+                  "enemy": "carapace_brute",
+                  "interval_ms": 0,
+                  "lane": "east",
+                  "offset_ms": 16000
+                }
+              ],
+              "start_ms": 298000
+            },
+            {
+              "groups": [
+                {
+                  "count": 30,
+                  "enemy": "swarmer",
+                  "interval_ms": 1100,
+                  "lane": "west",
+                  "offset_ms": 0
+                },
+                {
+                  "count": 30,
+                  "enemy": "swarmer",
+                  "interval_ms": 1100,
+                  "lane": "east",
+                  "offset_ms": 550
+                },
+                {
+                  "count": 5,
+                  "enemy": "skimmer",
+                  "interval_ms": 6000,
+                  "lane": "east",
+                  "offset_ms": 3000
+                },
+                {
+                  "count": 1,
+                  "enemy": "carapace_brute",
+                  "interval_ms": 0,
+                  "lane": "west",
+                  "offset_ms": 20000
+                },
+                {
+                  "count": 1,
+                  "enemy": "carapace_brute",
+                  "interval_ms": 0,
+                  "lane": "east",
+                  "offset_ms": 28000
+                }
+              ],
+              "start_ms": 334000
+            }
+          ],
+          "width": 9
+        }
+      ]
     },
     "status_effects": {
       "mark": {
@@ -261,7 +752,8 @@
           "range_mt": 3000,
           "role": "Generalist, hits ground and air",
           "shots_per_s_x100": 200,
-          "splash_mt": 0
+          "splash_mt": 0,
+          "targeting": "first"
         },
         {
           "abilities": [],
@@ -270,10 +762,11 @@
           "damage_type": "thermal",
           "damage_x100": 500,
           "id": "plasma_torch",
-          "range_mt": 1800,
+          "range_mt": 2200,
           "role": "Short-range splash, thermal",
           "shots_per_s_x100": 250,
-          "splash_mt": 1000
+          "splash_mt": 1000,
+          "targeting": "first"
         },
         {
           "abilities": [],
@@ -285,7 +778,8 @@
           "range_mt": 5000,
           "role": "Long range, pierces armor",
           "shots_per_s_x100": 50,
-          "splash_mt": 0
+          "splash_mt": 0,
+          "targeting": "strongest"
         },
         {
           "abilities": [
@@ -302,7 +796,8 @@
           "range_mt": 3000,
           "role": "EMP, strong against shields, slows",
           "shots_per_s_x100": 160,
-          "splash_mt": 0
+          "splash_mt": 0,
+          "targeting": "first"
         },
         {
           "abilities": [],
@@ -314,7 +809,8 @@
           "range_mt": 3500,
           "role": "Anti-air splash",
           "shots_per_s_x100": 120,
-          "splash_mt": 800
+          "splash_mt": 800,
+          "targeting": "first"
         },
         {
           "abilities": [
@@ -333,7 +829,8 @@
           "range_mt": 3000,
           "role": "Reveals cloaked aliens and marks targets",
           "shots_per_s_x100": 0,
-          "splash_mt": 0
+          "splash_mt": 0,
+          "targeting": "first"
         }
       ]
     }

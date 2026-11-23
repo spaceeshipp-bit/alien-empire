@@ -25,6 +25,8 @@ const MAX_MS: int = 3600000
 const CLASSES := ["swarm", "armored", "shielded", "air", "cloaked", "titan"]
 const DAMAGE_TYPES := ["standard", "emp", "thermal", "none"]
 const RATINGS := ["strong", "neutral", "weak", "cant_hit"]
+## How a tower picks among the aliens it can hit, by index (D-036).
+const TARGETING := ["first", "strongest"]
 ## Abilities this sim version runs (D-034). A tower with any other ability can't
 ## be built yet; slow, reveal and mark arrive in M2.
 const TOWER_ABILITIES_RUN := []
@@ -71,6 +73,8 @@ class TowerType:
 	var unrevealed_bp: int = 0
 	## The shield multiplier for its damage type (damage pipeline step 5).
 	var shield_mult_bp: int = 10000
+	## An index into TARGETING.
+	var targeting: int = 0
 	## False when it has an ability this sim version doesn't run.
 	var supported: bool = true
 
@@ -247,6 +251,10 @@ func _read_towers(r: DataReader, part: Dictionary, counters_part: Dictionary, da
 		if not DAMAGE_TYPES.has(t.damage_type):
 			r.fail(path + ".damage_type", "unknown damage type %s" % t.damage_type)
 		t.armor_pierce_bp = r.get_int(d, "armor_pierce_bp", path, 0, 10000)
+		t.targeting = TARGETING.find(r.get_string(d, "targeting", path))
+		if t.targeting < 0:
+			r.fail(path + ".targeting", "expected first or strongest")
+			t.targeting = 0
 		var abilities: Array = r.get_array(d, "abilities", path)
 		for k in abilities.size():
 			var a: Dictionary = r.item_dict(abilities, k, path + ".abilities")

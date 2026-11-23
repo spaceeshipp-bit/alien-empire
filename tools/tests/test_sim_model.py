@@ -77,6 +77,7 @@ def _bundle() -> dict:
 
 def _spec(groups=(), lane_end=1000, **extra) -> dict:
     spec = {"battle_id": "t", "mode": "pve", "seed": 1, "max_ms": 50_000, "lives": 20, "credits": 0, "towers": [],
+            "call_credits_per_s": 0, "call_credits_max": 0, "clean_wave_credits": 0,
             "map": {"lanes": [{"id": "a", "ground": [[0, 0], [0, lane_end]]}], "build_tiles": []},
             "waves": [{"start_ms": 0, "hp_bp": 10000, "credits_bp": 10000, "groups": list(groups)}] if groups else [],
             "commands": []}
@@ -177,8 +178,79 @@ def test_towers_pick_the_alien_closest_to_the_core():
         name="first", config_hash="0" * 64, config_version=1, enemies=(slow, fast), battle_id="first", seed=1,
         max_ticks=51, lanes=(sim_cases.Lane(((500, 0), (500, 100_000))),),
         groups=(sim_cases.Group(0, 0, 1, 0, 0, 0), sim_cases.Group(1, 0, 1, 40, 0, 0)),
-        towers=(gun,), credits=10, tower_set=(0,), build_tiles=((0, 0),),
+        towers=(gun,), credits=10, tower_set=(0,), build_tiles=((0, 0),), wave_starts=(0,),
         commands=(sim_cases.Command(50, 1, 0, 0, 0),),  # by tick 50 the fast one leads, 1000 mt to 500
     )
     result = sim_model.run(case)
     assert (result.kills, result.credits_x100) == (1, 10000)
+
+
+# Sim version 3 (D-036): Strongest targeting, calling a wave early, the clean-wave bonus.
+
+def _duel(targeting: int):
+    """A slow tough alien ahead, a fast weak one behind but in range: which does one shot hit?"""
+    tough = sim_cases.Enemy(50_000, 0, 0, 100, False, 1, kill_credits_x100=0)
+    weak = sim_cases.Enemy(100, 0, 0, 100, False, 1, kill_credits_x100=10_000)
+    gun = sim_cases.Tower(10, 10**6, 50, 100_000, 0, 10000, 0, (10000,) * 6, 0, targeting=targeting)
+    return sim_cases.Case(
+        name="duel", config_hash="0" * 64, config_version=1, enemies=(tough, weak), battle_id="duel", seed=1,
+        max_ticks=12, lanes=(sim_cases.Lane(((500, 0), (500, 100_000))),),
+        groups=(sim_cases.Group(1, 0, 1, 0, 0, 0), sim_cases.Group(0, 0, 1, 5, 0, 0)),
+        towers=(gun,), credits=10, tower_set=(0,), build_tiles=((0, 0),), wave_starts=(0,),
+        commands=(sim_cases.Command(10, 1, 0, 0, 0),),
+    )
+
+
+def test_first_shoots_the_leader_and_strongest_the_toughest():
+    # The weak one spawned first and leads: First kills it (10,000 credits); Strongest hits the tough one.
+    assert sim_model.run(_duel(0)).credits_x100 == 10_000
+    assert sim_model.run(_duel(1)).credits_x100 == 0
+
+
+def test_strongest_finishes_the_alien_it_started_on():
+    # Two of a kind a tick apart, a gun that kills in 2 shots and re-picks every shot.
+    # By what's left it would switch to the fresh one after a hit; by full HP it stays
+    # on the leader, so the second shot kills (one kill and its 100 credits).
+    kind = sim_cases.Enemy(10_000, 0, 0, 100, False, 1, kill_credits_x100=10_000)
+    gun = sim_cases.Tower(10, 6_000, 2_000, 100_000, 0, 10000, 0, (10000,) * 6, 0, targeting=1)
+    case = sim_cases.Case(
+        name="focus", config_hash="0" * 64, config_version=1, enemies=(kind,), battle_id="focus", seed=1,
+        max_ticks=6, lanes=(sim_cases.Lane(((500, 0), (500, 100_000))),),
+        groups=(sim_cases.Group(0, 0, 2, 0, 1, 0),), towers=(gun,), credits=10, tower_set=(0,),
+        build_tiles=((0, 0),), wave_starts=(0,), commands=(sim_cases.Command(4, 1, 0, 0, 0),),
+        rules=sim_cases.Rules(retarget_ticks=0),
+    )
+    result = sim_model.run(case)
+    assert (result.kills, result.credits_x100) == (1, 10_000)
+
+
+def _waves_case(commands, clean=0, per_s=1, cap=15, leak=False):
+    swarmer = sim_cases.Enemy(100, 0, 0, 1000 if leak else 1, False, 1)
+    return sim_cases.Case(
+        name="waves", config_hash="0" * 64, config_version=1, enemies=(swarmer,), battle_id="waves", seed=1,
+        max_ticks=4000, lanes=(sim_cases.Lane(((500, 0), (500, 1000))),),
+        groups=(sim_cases.Group(0, 0, 1, 100, 0, 0, wave_index=0), sim_cases.Group(0, 0, 1, 400, 0, 0, wave_index=1),
+                sim_cases.Group(0, 0, 1, 700, 0, 0, wave_index=2)),
+        wave_starts=(100, 400, 700), commands=tuple(commands), call_credits_per_s=per_s, call_credits_max=cap,
+        clean_wave_credits=clean, lives=100,
+    )
+
+
+def test_calling_a_wave_pays_per_second_skipped_up_to_the_cap():
+    # At tick 50, wave 0 (tick 100) is 50 ticks away: 2.5 s at 1 credit a second pays 250 (x100).
+    assert sim_model.run(_waves_case([sim_cases.Command(50, 4, -1, 0, 0)])).credits_x100 == 250
+    # At tick 0 it's 5 s away; a cap of 3 credits pays 300.
+    assert sim_model.run(_waves_case([sim_cases.Command(0, 4, -1, 0, 0)], cap=3)).credits_x100 == 300
+
+
+def test_calling_moves_every_later_wave_and_refuses_when_none_is_left():
+    early = sim_model.run(_waves_case([sim_cases.Command(0, 4, -1, 0, 0)], leak=True))
+    late = sim_model.run(_waves_case([], leak=True))
+    assert late.ticks - early.ticks == 100  # every wave came 100 ticks sooner
+    refused = sim_model.run(_waves_case([sim_cases.Command(705, 4, -1, 0, 0)], leak=True))  # the last wave began at 700
+    assert refused.refused == 1
+
+
+def test_a_wave_that_leaks_pays_no_clean_bonus():
+    # Nothing kills these aliens, so every wave leaks and nothing is paid.
+    assert sim_model.run(_waves_case([], clean=10, leak=True)).credits_x100 == 0

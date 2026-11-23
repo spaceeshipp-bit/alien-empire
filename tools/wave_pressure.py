@@ -165,28 +165,32 @@ def playthrough(data: dict, stage: dict, seed: int = 1, only: str = "") -> tuple
     for tile, tower in layout:
         for _ in range(fu["max_level"] - 1):
             plan.append(("upgrade", tile, tower))
-    commands: list[dict] = []
+    up = sim_cases.bundle_rules(bundle)[0]
+    resolved = {tid: sim_cases.resolve_tower(bundle, towers[tid]) for _tile, tid in layout}
+    index = {t["id"]: i for i, t in enumerate(sim_cases.bundle_towers(bundle))}
     levels: dict[tuple[int, int], int] = {}
-    next_from = 0
-    for kind, tile, tower_id in plan:
-        tower = sim_cases.resolve_tower(bundle, towers[tower_id])
-        up = sim_cases.bundle_rules(bundle)[0]
-        if kind == "place":
-            cost = tower.cost_credits * 100
-        else:
-            cost = sim_model.upgrade_cost(tower, up, levels[tuple(tile)])
-        trace: list[int] = []
-        spec["commands"] = commands
-        sim_model.run(sim_cases.case_from_spec(bundle, spec), trace)
-        tick = next((t for t in range(next_from, len(trace)) if trace[t] >= cost), None)
-        if tick is None:
-            break  # never affordable before the battle ends
-        args = {"tile": list(tile)} if kind == "upgrade" else {"tower": tower_id, "tile": list(tile)}
-        commands = commands + [{"tick": tick, "type": kind, "args": args}]
-        levels[tuple(tile)] = levels.get(tuple(tile), 0) + 1
-        next_from = tick + 1
-    spec["commands"] = commands
-    return sim_model.run(sim_cases.case_from_spec(bundle, spec)), commands
+    step = [0]
+
+    def builder(tick: int, credits: int) -> list:
+        """The next item of the plan, once the credits cover it: one command a tick."""
+        if step[0] >= len(plan):
+            return []
+        kind, tile, tower_id = plan[step[0]]
+        key = tuple(tile)
+        cost = resolved[tower_id].cost_credits * 100 if kind == "place" else sim_model.upgrade_cost(
+            resolved[tower_id], up, levels[key])
+        if credits < cost:
+            return []
+        step[0] += 1
+        levels[key] = levels.get(key, 0) + 1
+        return [sim_cases.Command(tick, 1 if kind == "place" else 2, index[tower_id] if kind == "place" else -1, key[0], key[1])]
+
+    result = sim_model.run(sim_cases.case_from_spec(bundle, spec), bot=builder)
+    names = {i: tid for tid, i in index.items()}
+    commands = [{"tick": c.tick, "type": "place" if c.kind == 1 else "upgrade",
+                 "args": {"tower": names[c.tower_index], "tile": [c.col, c.row]} if c.kind == 1 else {"tile": [c.col, c.row]}}
+                for c in result.bot_commands]
+    return result, commands
 
 
 def report(data: dict, stage: dict, strict_last: bool = False) -> bool:

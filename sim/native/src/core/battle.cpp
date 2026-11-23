@@ -62,6 +62,10 @@ void Battle::reset() {
 	credits_x100 = 0;
 	kills = 0;
 	refused_commands = 0;
+	wave_starts.clear();
+	wave_pending.clear();
+	wave_leaked.clear();
+	wave_done.clear();
 	releases_.clear();
 	checkpoints.clear();
 	errors.clear();
@@ -99,8 +103,18 @@ bool Battle::setup(BattleConfig config, BattleSpec spec) {
 	if (!in_range(spec_.max_ticks, 1, MAX_TICKS)) {
 		errors.push_back("max_ticks out of range");
 	}
-	if (!in_range(spec_.lives, 1, MAX_STAT) || !in_range(spec_.credits, 0, MAX_STAT)) {
+	if (!in_range(spec_.lives, 1, MAX_STAT) || !in_range(spec_.credits, 0, MAX_STAT) ||
+			!in_range(spec_.call_credits_per_s, 0, MAX_STAT) || !in_range(spec_.call_credits_max, 0, MAX_STAT) ||
+			!in_range(spec_.clean_wave_credits, 0, MAX_STAT)) {
 		errors.push_back("lives or credits out of range");
+	}
+	if (int64_t(spec_.wave_starts.size()) > SEQ_MASK) {
+		errors.push_back("too many waves");
+	}
+	for (size_t w = 0; w < spec_.wave_starts.size(); w++) {
+		if (!in_range(spec_.wave_starts[w], 0, MAX_TICKS * 2)) {
+			errors.push_back("wave " + std::to_string(w) + ": start out of range");
+		}
 	}
 	for (size_t e = 0; e < config_.enemies.size(); e++) {
 		const EnemyType &t = config_.enemies[e];
@@ -125,7 +139,8 @@ bool Battle::setup(BattleConfig config, BattleSpec spec) {
 	}
 	for (size_t t = 0; t < config_.towers.size(); t++) {
 		const TowerType &type = config_.towers[t];
-		bool ok = in_range(type.cost_credits, 1, MAX_STAT) && in_range(type.damage_x100, 0, MAX_STAT) &&
+		bool ok = in_range(type.targeting, TARGET_FIRST, TARGET_STRONGEST) &&
+				in_range(type.cost_credits, 1, MAX_STAT) && in_range(type.damage_x100, 0, MAX_STAT) &&
 				in_range(type.shots_per_s_x100, 0, MAX_STAT) && in_range(type.range_mt, 0, MAX_STAT) &&
 				in_range(type.splash_mt, 0, MAX_STAT) && in_range(type.shield_mult_bp, 1, MAX_MULT_BP) &&
 				in_range(type.pierce_bp, 0, 10000) && in_range(type.unrevealed_bp, 0, MAX_MULT_BP);
@@ -187,6 +202,7 @@ bool Battle::setup(BattleConfig config, BattleSpec spec) {
 		}
 	}
 	int64_t total_spawns = 0;
+	std::vector<int64_t> wave_groups(spec_.wave_starts.size(), 0);
 	for (size_t g = 0; g < spec_.groups.size(); g++) {
 		const SpawnGroup &group = spec_.groups[g];
 		const std::string where = "group " + std::to_string(g);
@@ -198,6 +214,14 @@ bool Battle::setup(BattleConfig config, BattleSpec spec) {
 			errors.push_back(where + ": unknown lane");
 			continue;
 		}
+		if (!in_range(group.wave_index, 0, int64_t(spec_.wave_starts.size()) - 1)) {
+			errors.push_back(where + ": unknown wave");
+			continue;
+		}
+		if (group.first_tick < spec_.wave_starts[size_t(group.wave_index)]) {
+			errors.push_back(where + ": starts before its wave");
+		}
+		wave_groups[size_t(group.wave_index)] += 1;
 		if (!in_range(group.count, 1, SEQ_MASK) || !in_range(group.first_tick, 0, MAX_TICKS * 2) ||
 				!in_range(group.interval_ticks, 0, MAX_TICKS) || !in_range(group.jitter_ticks, 0, MAX_TICKS) ||
 				!in_range(group.hp_bp, 1, MAX_SCALE_BP) || !in_range(group.credits_bp, 0, MAX_SCALE_BP)) {
@@ -218,6 +242,11 @@ bool Battle::setup(BattleConfig config, BattleSpec spec) {
 	if (total_spawns > SEQ_MASK) {
 		errors.push_back("too many spawns: " + std::to_string(total_spawns));
 	}
+	for (size_t w = 0; w < wave_groups.size(); w++) {
+		if (wave_groups[w] == 0) {
+			errors.push_back("wave " + std::to_string(w) + ": has no group");
+		}
+	}
 	if (int64_t(commands.size()) > MAX_COMMANDS) {
 		errors.push_back("too many commands");
 	}
@@ -229,6 +258,13 @@ bool Battle::setup(BattleConfig config, BattleSpec spec) {
 	lives = spec_.lives;
 	credits_x100 = spec_.credits * 100;
 	tile_tower_.assign(spec_.build_tiles.size(), 0);
+	wave_starts = spec_.wave_starts;
+	wave_pending.assign(wave_starts.size(), 0);
+	wave_leaked.assign(wave_starts.size(), 0);
+	wave_done.assign(wave_starts.size(), 0);
+	for (const SpawnGroup &group : spec_.groups) {
+		wave_pending[size_t(group.wave_index)] += group.count;
+	}
 	set_up_grid();
 	build_spawn_plan();
 	ready_ = true;
@@ -266,6 +302,13 @@ std::string Battle::queue_command(const Command &command) {
 	if (int64_t(spec_.commands.size()) >= MAX_COMMANDS) {
 		return "too many commands";
 	}
+	if (command.kind == CALL_WAVE) {
+		if (command.tower_index != -1 || command.col != 0 || command.row != 0) {
+			return "call_wave takes no tower or tile";
+		}
+		spec_.commands.push_back(command);
+		return "";
+	}
 	if (tile_index(command.col, command.row) < 0) {
 		return "not a build tile";
 	}
@@ -302,6 +345,7 @@ void Battle::advance() {
 		release();
 		aliens.erase(std::remove_if(aliens.begin(), aliens.end(), [](const Alien &a) { return a.dead; }), aliens.end());
 	}
+	finish_waves();
 	tick += 1;
 	if (tick % CHECKPOINT_TICKS == 0) {
 		checkpoints.push_back(state_hash().substr(0, 16));
@@ -371,6 +415,14 @@ std::string Battle::state_hash() const {
 		h.add_int(a.kill_credits_x100);
 		h.add_int(a.hp_bp);
 		h.add_int(a.credits_bp);
+		h.add_int(a.wave_index);
+	}
+	h.add_int(int64_t(wave_starts.size()));
+	for (size_t w = 0; w < wave_starts.size(); w++) {
+		h.add_int(wave_starts[w]);
+		h.add_int(wave_pending[w]);
+		h.add_int(wave_leaked[w]);
+		h.add_int(wave_done[w]);
 	}
 	return h.finish_hex();
 }
@@ -452,10 +504,11 @@ void Battle::spawn_due() {
 }
 
 void Battle::spawn(const SpawnGroup &group) {
-	add_alien(group.enemy_index, group.lane_index, group.hp_bp, group.credits_bp, 0);
+	add_alien(group.enemy_index, group.lane_index, group.hp_bp, group.credits_bp, 0, group.wave_index);
 }
 
-void Battle::add_alien(int64_t enemy_index, int64_t lane_index, int64_t hp_bp, int64_t credits_bp, int64_t distance_mt) {
+void Battle::add_alien(int64_t enemy_index, int64_t lane_index, int64_t hp_bp, int64_t credits_bp, int64_t distance_mt,
+		int64_t wave_index) {
 	const EnemyType &type = config_.enemies[size_t(enemy_index)];
 	const LaneSpec &lane = spec_.lanes[size_t(lane_index)];
 	Alien a;
@@ -476,6 +529,7 @@ void Battle::add_alien(int64_t enemy_index, int64_t lane_index, int64_t hp_bp, i
 	a.kill_credits_x100 = cap(type.kill_credits_x100 * credits_bp / 10000);
 	a.hp_bp = hp_bp;
 	a.credits_bp = credits_bp;
+	a.wave_index = wave_index;
 	const Point p = a.path->position_at(a.distance_mt);
 	a.x = p.x;
 	a.y = p.y;
@@ -491,8 +545,9 @@ void Battle::release() {
 		const EnemyType &type = config_.enemies[size_t(dead->type_index)];
 		const Alien copy = *dead;  // add_alien may move the aliens vector
 		for (int64_t n = 0; n < type.release_count; n++) {
-			add_alien(type.release_index, copy.lane_index, copy.hp_bp, copy.credits_bp, copy.distance_mt);
+			add_alien(type.release_index, copy.lane_index, copy.hp_bp, copy.credits_bp, copy.distance_mt, copy.wave_index);
 		}
+		wave_pending[size_t(copy.wave_index)] += type.release_count;
 	}
 	releases_.clear();
 }
@@ -511,6 +566,8 @@ bool Battle::move_aliens() {
 			leaked_count += 1;
 			leaked_lives += a.leak_lives;
 			lives = std::max<int64_t>(0, lives - a.leak_lives);
+			wave_pending[size_t(a.wave_index)] -= 1;
+			wave_leaked[size_t(a.wave_index)] = 1;
 			any_leaked = true;
 		}
 		const Point p = a.path->position_at(a.distance_mt);
@@ -550,6 +607,10 @@ void Battle::apply_commands() {
 }
 
 void Battle::apply(const Command &command, int64_t index) {
+	if (command.kind == CALL_WAVE) {
+		call_wave(index);
+		return;
+	}
 	const int64_t tile = tile_index(command.col, command.row);
 	int64_t &occupant = tile_tower_[size_t(tile)];
 	const auto refuse = [&]() {
@@ -606,6 +667,61 @@ void Battle::apply(const Command &command, int64_t index) {
 	events.push_back({ SOLD, it->id, 0, it->x, it->y });
 	towers.erase(it);
 	occupant = 0;
+}
+
+// Brings the next wave (the earliest that hasn't started; ties to the lower
+// index) in now. Every wave that hasn't started moves earlier by the same
+// amount, with its spawns, so the later waves keep their spacing. The player is
+// paid call_credits_per_s for each second skipped, up to call_credits_max.
+void Battle::call_wave(int64_t index) {
+	int64_t next = -1;
+	for (size_t w = 0; w < wave_starts.size(); w++) {
+		if (wave_starts[w] > tick && (next < 0 || wave_starts[w] < wave_starts[size_t(next)])) {
+			next = int64_t(w);
+		}
+	}
+	if (next < 0) {
+		refused_commands += 1;
+		events.push_back({ REFUSED, index, 0, 0, 0 });
+		return;
+	}
+	const int64_t skip = wave_starts[size_t(next)] - tick;
+	std::vector<bool> moves(wave_starts.size(), false);
+	for (size_t w = 0; w < wave_starts.size(); w++) {
+		if (wave_starts[w] > tick) {
+			moves[w] = true;
+			wave_starts[w] -= skip;
+		}
+	}
+	for (size_t i = spawn_cursor_; i < spawn_keys_.size(); i++) {
+		const int64_t seq = spawn_keys_[i] & SEQ_MASK;
+		const SpawnGroup &group = spec_.groups[size_t(spawn_group_[size_t(seq)])];
+		if (moves[size_t(group.wave_index)]) {
+			spawn_keys_[i] -= skip << SEQ_BITS;
+		}
+	}
+	// Keys stay unique (each carries its plan position), so the order is unique.
+	std::sort(spawn_keys_.begin() + int64_t(spawn_cursor_), spawn_keys_.end());
+	const int64_t bonus = std::min(skip * spec_.call_credits_per_s * 100 / TICK_RATE, spec_.call_credits_max * 100);
+	credits_x100 += bonus;
+	events.push_back({ CALLED, next, bonus, 0, 0 });
+}
+
+// A wave is done when every alien it planned has spawned and every one of
+// them (and any they released) has died or leaked. If none leaked, it pays the
+// clean-wave bonus. Waves finish in index order.
+void Battle::finish_waves() {
+	for (size_t w = 0; w < wave_pending.size(); w++) {
+		if (wave_done[w] != 0 || wave_pending[w] != 0) {
+			continue;
+		}
+		wave_done[w] = 1;
+		const bool clean = wave_leaked[w] == 0;
+		if (clean) {
+			credits_x100 += spec_.clean_wave_credits * 100;
+		}
+		events.push_back({ WAVE_DONE, int64_t(w), clean ? 1 : 0, 0, 0 });
+	}
 }
 
 void Battle::set_up_grid() {
@@ -689,20 +805,32 @@ bool Battle::can_hit(const TowerType &type, const Alien &alien) const {
 }
 
 // "First": the hittable alien in range with the least distance left to the
-// Core, ties to the lower id.
+// Core, ties to the lower id. "Strongest": the toughest kind, by full HP plus
+// full shield (the wave's HP growth counts), ties to the least distance left,
+// then the lower id. Full values, not what's left, so a tower finishes the alien
+// it started on instead of spreading its shots across a pack.
 Alien *Battle::pick_target(const Tower &tower, const TowerType &type) {
 	search(tower.x, tower.y, tower.range_mt);
 	Alien *best = nullptr;
 	int64_t best_left = 0;
+	int64_t best_toughness = 0;
 	for (int32_t index : found_) {
 		Alien &a = aliens[size_t(index)];
 		if (a.dead || !can_hit(type, a) || !within(tower.x, tower.y, a.x, a.y, tower.range_mt)) {
 			continue;
 		}
 		const int64_t left = a.path->length - a.distance_mt;
-		if (best == nullptr || left < best_left || (left == best_left && a.id < best->id)) {
+		const int64_t toughness = a.max_hp_x100 + a.max_shield_x100;
+		bool better = best == nullptr;
+		if (!better && type.targeting == TARGET_STRONGEST && toughness != best_toughness) {
+			better = toughness > best_toughness;
+		} else if (!better) {
+			better = left < best_left || (left == best_left && a.id < best->id);
+		}
+		if (better) {
 			best = &a;
 			best_left = left;
+			best_toughness = toughness;
 		}
 	}
 	return best;
@@ -782,6 +910,7 @@ void Battle::hit(const Tower &tower, const TowerType &type, Alien &alien) {
 		alien.dead = true;
 		credits_x100 += alien.kill_credits_x100;
 		kills += 1;
+		wave_pending[size_t(alien.wave_index)] -= 1;
 		events.push_back({ KILL, alien.id, tower.id, alien.x, alien.y });
 		if (config_.enemies[size_t(alien.type_index)].release_index >= 0) {
 			releases_.push_back(alien.id);

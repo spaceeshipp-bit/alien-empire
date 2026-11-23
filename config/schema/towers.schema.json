@@ -26,6 +26,7 @@
       "required": [
         "id",
         "role",
+        "targeting",
         "cost_credits",
         "damage_x100",
         "shots_per_s_x100",
@@ -37,6 +38,10 @@
       ],
       "properties": {
         "id": { "$ref": "common.schema.json#/$defs/id" },
+        "targeting": {
+          "enum": ["first", "strongest"],
+          "description": "How it picks among the aliens it can hit (D-036): first is the one closest to the Core, strongest the toughest kind (the most full HP and shield), finishing what it started. M2 lets the player choose."
+        },
         "role": {
           "type": "string",
           "minLength": 1,

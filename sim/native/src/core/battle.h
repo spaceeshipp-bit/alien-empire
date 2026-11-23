@@ -24,6 +24,9 @@
 
 namespace aetd::sim {
 
+// How a tower picks among the aliens it can hit (D-034, D-036).
+enum Targeting : int64_t { TARGET_FIRST = 0, TARGET_STRONGEST = 1 };
+
 // The six classes, in config/schema/common.schema.json's order.
 enum EnemyClass : int64_t { SWARM = 0, ARMORED = 1, SHIELDED = 2, AIR = 3, CLOAKED = 4, TITAN = 5 };
 inline constexpr size_t CLASS_COUNT = 6;
@@ -60,6 +63,7 @@ struct TowerType {
 	std::array<int64_t, CLASS_COUNT> rating_bp{};
 	// Damage share against a cloaked alien nothing reveals; 0 means it can't target one.
 	int64_t unrevealed_bp = 0;
+	int64_t targeting = TARGET_FIRST;
 	// False when it has an ability this sim version doesn't run.
 	bool supported = true;
 };
@@ -107,9 +111,12 @@ struct SpawnGroup {
 	// The wave's scaling of HP and kill credits.
 	int64_t hp_bp = 10000;
 	int64_t credits_bp = 10000;
+	// Which wave it belongs to (an index into BattleSpec::wave_starts).
+	int64_t wave_index = 0;
 };
 
-enum CommandKind : int64_t { PLACE = 1, UPGRADE = 2, SELL = 3 };
+// CALL_WAVE brings the next wave in now, for a bonus (D-036).
+enum CommandKind : int64_t { PLACE = 1, UPGRADE = 2, SELL = 3, CALL_WAVE = 4 };
 
 struct Command {
 	int64_t tick = 0;
@@ -137,6 +144,13 @@ struct BattleSpec {
 	std::vector<LaneSpec> lanes;
 	std::vector<SpawnGroup> groups;
 	std::vector<Command> commands;
+	// Each wave's start tick; every group belongs to one and starts no earlier.
+	std::vector<int64_t> wave_starts;
+	// Calling a wave early pays this many credits a second it skips, up to the max.
+	int64_t call_credits_per_s = 0;
+	int64_t call_credits_max = 0;
+	// A wave whose every alien dies without a leak pays this.
+	int64_t clean_wave_credits = 0;
 };
 
 struct Alien {
@@ -162,6 +176,7 @@ struct Alien {
 	// Its wave's scaling, which aliens it releases inherit.
 	int64_t hp_bp = 10000;
 	int64_t credits_bp = 10000;
+	int64_t wave_index = 0;
 	// Where distance_mt puts it on its path, refreshed after every move.
 	int64_t x = 0;
 	int64_t y = 0;
@@ -187,7 +202,11 @@ struct Tower {
 };
 
 // What happened in the last tick, for drawing it. Not part of the state.
-enum EventKind : int64_t { SHOT = 1, KILL = 2, LEAK = 3, PLACED = 4, UPGRADED = 5, SOLD = 6, REFUSED = 7 };
+enum EventKind : int64_t {
+	SHOT = 1, KILL = 2, LEAK = 3, PLACED = 4, UPGRADED = 5, SOLD = 6, REFUSED = 7,
+	WAVE_DONE = 8,  // a = wave index, b = 1 if no alien of it leaked (it paid the clean-wave bonus)
+	CALLED = 9,  // a = wave index called early, b = the bonus paid, x100
+};
 
 struct Event {
 	int64_t kind = SHOT;
@@ -256,6 +275,13 @@ public:
 	int64_t credits_x100 = 0;
 	int64_t kills = 0;
 	int64_t refused_commands = 0;
+	// Each wave's start tick now (calling a wave early moves the later ones),
+	// its aliens not yet resolved (planned spawns plus live ones), whether one
+	// leaked, and whether it's done.
+	std::vector<int64_t> wave_starts;
+	std::vector<int64_t> wave_pending;
+	std::vector<int64_t> wave_leaked;
+	std::vector<int64_t> wave_done;
 	std::vector<std::string> checkpoints;
 	std::vector<std::string> errors;
 	std::vector<Event> events;
@@ -300,7 +326,10 @@ private:
 	void build_spawn_plan();
 	void spawn_due();
 	void spawn(const SpawnGroup &group);
-	void add_alien(int64_t enemy_index, int64_t lane_index, int64_t hp_bp, int64_t credits_bp, int64_t distance_mt);
+	void add_alien(int64_t enemy_index, int64_t lane_index, int64_t hp_bp, int64_t credits_bp, int64_t distance_mt,
+			int64_t wave_index);
+	void call_wave(int64_t index);
+	void finish_waves();
 	void release();
 	bool move_aliens();
 	void regenerate_shields();

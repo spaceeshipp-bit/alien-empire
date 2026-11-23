@@ -54,6 +54,9 @@ static func build_spec(stage: Dictionary, battle_seed: int, battle_id: String = 
 		"lives": whole(stage.get("lives", 0)),
 		"credits": whole(stage.get("credits", 0)),
 		"towers": whole(stage.get("towers", [])),
+		"call_credits_per_s": whole(stage.get("call_credits_per_s", 0)),
+		"call_credits_max": whole(stage.get("call_credits_max", 0)),
+		"clean_wave_credits": whole(stage.get("clean_wave_credits", 0)),
 		"map": {
 			"lanes": whole(stage.get("lanes", [])),
 			"build_tiles": whole(stage.get("build_tiles", [])),

@@ -108,6 +108,7 @@ public:
 	int64_t get_credits_x100() const { return battle.credits_x100; }
 	int64_t get_kills() const { return battle.kills; }
 	int64_t get_refused_commands() const { return battle.refused_commands; }
+	godot::PackedInt64Array get_wave_starts() const;
 	godot::PackedStringArray get_checkpoints() const;
 	godot::PackedStringArray get_errors() const;
 	// One Dictionary per live alien, in id order (tests and debugging).

@@ -20,7 +20,7 @@ const MAX_BUILD_TILES: int = 4096
 const MAX_TOWERS_ALLOWED: int = 64
 const MAX_COMMANDS: int = 100000
 ## Command types this sim version understands (D-034).
-const KNOWN_COMMANDS := ["place", "upgrade", "sell"]
+const KNOWN_COMMANDS := ["place", "upgrade", "sell", "call_wave"]
 
 
 class Group:
@@ -55,6 +55,11 @@ var battle_seed: int = 0
 var max_ticks: int = 0
 var lives: int = 0
 var credits: int = 0
+## Bonuses (D-036): for calling a wave early, per second skipped and at most;
+## and for a wave that dies with no leak.
+var call_credits_per_s: int = 0
+var call_credits_max: int = 0
+var clean_wave_credits: int = 0
 ## Tower ids the player may build in this battle.
 var tower_ids: PackedStringArray = PackedStringArray()
 ## Build tiles, as Vector2i(column, row).
@@ -82,6 +87,9 @@ func parse(spec: Dictionary) -> bool:
 	max_ticks = r.get_ticks(spec, "max_ms", "spec", 50, MAX_BATTLE_MS)
 	lives = r.get_int(spec, "lives", "spec", 1, MAX_STAT)
 	credits = r.get_int(spec, "credits", "spec", 0, MAX_STAT)
+	call_credits_per_s = r.get_int(spec, "call_credits_per_s", "spec", 0, MAX_STAT)
+	call_credits_max = r.get_int(spec, "call_credits_max", "spec", 0, MAX_STAT)
+	clean_wave_credits = r.get_int(spec, "clean_wave_credits", "spec", 0, MAX_STAT)
 	_parse_towers(r, r.get_array(spec, "towers", "spec"))
 	_parse_map(r, r.get_dict(spec, "map", "spec"))
 	_parse_waves(r, r.get_array(spec, "waves", "spec"))
@@ -227,6 +235,11 @@ func _parse_commands(r: DataReader, list: Array) -> void:
 		previous_tick = command.tick
 		if not KNOWN_COMMANDS.has(command.kind):
 			r.fail(path + ".type", "unknown command type %s" % command.kind)
+			continue
+		if command.kind == "call_wave":
+			if not args.is_empty():
+				r.fail(path + ".args", "call_wave takes no arguments")
+			commands.append(command)
 			continue
 		var allowed: Array = ["tower", "tile"] if command.kind == "place" else ["tile"]
 		for key in args.keys():

@@ -9,7 +9,7 @@
       "speed_mtps": 2000,
       "movement": "ground",
       "leak_lives": 1,
-      "kill_credits_x100": 400,
+      "kill_credits_x100": 500,
       "abilities": []
     },
     {

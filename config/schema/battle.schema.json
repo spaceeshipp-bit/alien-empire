@@ -5,7 +5,8 @@
   "description": "Everything a battle needs besides the config: the seed, a snapshot of the map, the waves and the player's command log. Replaying the same spec on the same config and sim version gives the same result on any device.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["battle_id", "mode", "seed", "max_ms", "lives", "credits", "towers", "map", "waves", "commands"],
+  "required": ["battle_id", "mode", "seed", "max_ms", "lives", "credits", "towers", "call_credits_per_s",
+    "call_credits_max", "clean_wave_credits", "map", "waves", "commands"],
   "properties": {
     "battle_id": {
       "type": "string",
@@ -45,6 +46,18 @@
       "maxItems": 64,
       "items": { "$ref": "common.schema.json#/$defs/id" },
       "description": "Tower ids the player may build in this battle. Empty for a battle with no field towers."
+    },
+    "call_credits_per_s": {
+      "type": "integer", "minimum": 0, "maximum": 1000000000,
+      "description": "Calling the next wave early pays this many credits for each second it skips (D-036)."
+    },
+    "call_credits_max": {
+      "type": "integer", "minimum": 0, "maximum": 1000000000,
+      "description": "The most one early call pays."
+    },
+    "clean_wave_credits": {
+      "type": "integer", "minimum": 0, "maximum": 1000000000,
+      "description": "Paid when every alien of a wave has died with none leaking (D-036)."
     },
     "map": { "$ref": "#/$defs/map" },
     "waves": {
@@ -177,10 +190,14 @@
           "minimum": 0,
           "description": "The tick it applies at, before anything else in that tick. Below the battle's last tick."
         },
-        "type": { "enum": ["place", "upgrade", "sell"] },
+        "type": { "enum": ["place", "upgrade", "sell", "call_wave"] },
         "args": { "type": "object" }
       },
       "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "call_wave" } } },
+          "then": { "properties": { "args": { "type": "object", "additionalProperties": false } } }
+        },
         {
           "if": { "properties": { "type": { "const": "place" } } },
           "then": {
@@ -197,6 +214,9 @@
             }
           },
           "else": {
+            "if": { "properties": { "type": { "const": "call_wave" } } },
+            "then": true,
+            "else": {
             "properties": {
               "args": {
                 "type": "object",
@@ -204,6 +224,7 @@
                 "required": ["tile"],
                 "properties": { "tile": { "$ref": "#/$defs/tile" } }
               }
+            }
             }
           }
         }

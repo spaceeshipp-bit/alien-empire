@@ -23,11 +23,11 @@ const BattleSpec := preload("res://sim/core/battle_spec.gd")
 const CHECKPOINT_TICKS: int = 100
 ## Spawn keys pack the spawn tick above a 20-bit spawn sequence number.
 const SEQ_MASK: int = (1 << 20) - 1
-const COMMAND_KINDS := {"place": 1, "upgrade": 2, "sell": 3}
+const COMMAND_KINDS := {"place": 1, "upgrade": 2, "sell": 3, "call_wave": 4}
 
 enum Outcome { RUNNING, CLEARED, TIMED_OUT, LOST }
 ## What happened in the last tick (get_events), as in sim/native/src/core/battle.h.
-enum Event { SHOT = 1, KILL = 2, LEAK = 3, PLACED = 4, UPGRADED = 5, SOLD = 6, REFUSED = 7 }
+enum Event { SHOT = 1, KILL = 2, LEAK = 3, PLACED = 4, UPGRADED = 5, SOLD = 6, REFUSED = 7, WAVE_DONE = 8, CALLED = 9 }
 
 var tick: int:
 	get:
@@ -68,6 +68,10 @@ var kills: int:
 var refused_commands: int:
 	get:
 		return _native.get_refused_commands()
+## Each wave's start tick now: calling a wave early moves every later one.
+var wave_starts: PackedInt64Array:
+	get:
+		return _native.get_wave_starts()
 var checkpoints: PackedStringArray:
 	get:
 		return _native.get_checkpoints()
@@ -123,6 +127,8 @@ func setup(config: SimConfig, spec: BattleSpec) -> bool:
 func queue_command(kind: String, tile: Vector2i, tower_id: String = "", at_tick: int = -1) -> String:
 	if not COMMAND_KINDS.has(kind):
 		return "unknown command %s" % kind
+	if kind == "call_wave":
+		tile = Vector2i.ZERO
 	var tower_index: int = -1
 	if kind == "place":
 		var tower_type: SimConfig.TowerType = _config.tower(tower_id) if _config != null else null
@@ -141,7 +147,7 @@ func command_log() -> Array:
 	var names: PackedStringArray = _config.tower_ids()
 	for c: Dictionary in _native.get_commands():
 		var kind: String = COMMAND_KINDS.find_key(c.kind)
-		var args := {"tile": [c.col, c.row]}
+		var args := {"tile": [c.col, c.row]} if kind != "call_wave" else {}
 		if kind == "place":
 			args["tower"] = names[c.tower_index]
 		out.append({"tick": c.tick, "type": kind, "args": args})
@@ -201,7 +207,7 @@ func _config_data(config: SimConfig) -> Dictionary:
 			"cost_credits": t.cost_credits, "damage_x100": t.damage_x100, "shots_per_s_x100": t.shots_per_s_x100,
 			"range_mt": t.range_mt, "splash_mt": t.splash_mt, "shield_mult_bp": t.shield_mult_bp,
 			"pierce_bp": t.armor_pierce_bp, "rating_bp": t.rating_bp, "unrevealed_bp": t.unrevealed_bp,
-			"supported": t.supported,
+			"supported": t.supported, "targeting": t.targeting,
 		})
 	return {
 		"config_hash": config.config_hash, "config_version": config.config_version, "enemies": enemies,
@@ -227,7 +233,7 @@ func _spec_data(config: SimConfig, spec: BattleSpec) -> Dictionary:
 		groups.append({
 			"enemy_index": config.enemy(g.enemy_id).index, "lane_index": g.lane_index, "count": g.count,
 			"first_tick": g.first_tick, "interval_ticks": g.interval_ticks, "jitter_ticks": g.jitter_ticks,
-			"hp_bp": g.hp_bp, "credits_bp": g.credits_bp,
+			"hp_bp": g.hp_bp, "credits_bp": g.credits_bp, "wave_index": g.wave_index,
 		})
 	var tower_set := PackedInt64Array()
 	for id in spec.tower_ids:
@@ -240,10 +246,13 @@ func _spec_data(config: SimConfig, spec: BattleSpec) -> Dictionary:
 	for c: BattleSpec.Command in spec.commands:
 		commands.append({
 			"tick": c.tick, "kind": COMMAND_KINDS[c.kind],
-			"tower_index": config.tower(c.tower_id).index if c.kind == "place" else -1, "col": c.col, "row": c.row,
+			"tower_index": config.tower(c.tower_id).index if c.kind == "place" else -1,
+			"col": c.col if c.kind != "call_wave" else 0, "row": c.row if c.kind != "call_wave" else 0,
 		})
 	return {
 		"battle_id": spec.battle_id, "seed": spec.battle_seed, "max_ticks": spec.max_ticks,
 		"lives": spec.lives, "credits": spec.credits, "tower_set": tower_set, "build_tiles": tiles,
+		"wave_starts": spec.wave_starts, "call_credits_per_s": spec.call_credits_per_s,
+		"call_credits_max": spec.call_credits_max, "clean_wave_credits": spec.clean_wave_credits,
 		"lanes": lanes, "groups": groups, "commands": commands,
 	}

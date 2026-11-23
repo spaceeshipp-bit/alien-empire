@@ -1,5 +1,5 @@
 {
-  "config_version": 2,
-  "schema_version": 2,
-  "label": "M1: kill credits and tower retargeting added to the M0 baseline"
+  "config_version": 3,
+  "schema_version": 3,
+  "label": "M1: tower targeting, the Plasma Torch at 2.2 tiles, early calls and clean-wave bonuses"
 }

@@ -9,11 +9,14 @@ const Battle := preload("res://sim/core/battle.gd")
 const BUNDLE := "res://sim/tests/golden/config_bundle.json"
 
 
-func _config(speeds: Dictionary = {}) -> SimConfig:
+func _config(speeds: Dictionary = {}, targeting: Dictionary = {}) -> SimConfig:
 	var bundle: Dictionary = load_json(BUNDLE)
 	for entry in bundle["data"]["enemies"]["enemies"]:
 		if speeds.has(entry["id"]):
 			entry["speed_mtps"] = speeds[entry["id"]]
+	for entry in bundle["data"]["towers"]["towers"]:
+		if targeting.has(entry["id"]):
+			entry["targeting"] = targeting[entry["id"]]
 	var config := SimConfig.new()
 	expect_true(config.load_bundle(bundle), "config loads: %s" % str(config.errors))
 	return config
@@ -29,6 +32,9 @@ func _spec(groups: Array, lane_mt: int = 20000) -> Dictionary:
 		"lives": 20,
 		"credits": 0,
 		"towers": [],
+		"call_credits_per_s": 0,
+		"call_credits_max": 0,
+		"clean_wave_credits": 0,
 		"map": {
 			"lanes": [{
 				"id": "a",
@@ -373,3 +379,131 @@ func test_spec_refuses_coordinates_past_the_limit_without_building() -> bool:
 	var spec := BattleSpec.new()
 	expect_true(not spec.parse(spec_data), "a lane far off the map is refused")
 	return true
+
+
+# Sim version 3 (D-036): targeting, calling a wave early, the clean-wave bonus.
+
+## The last tick's events of one kind, as [a, b] pairs.
+func _events_of(battle: Battle, kind: int) -> Array:
+	var out: Array = []
+	var ev: PackedInt64Array = battle.events()
+	for i in range(0, ev.size(), 5):
+		if ev[i] == kind:
+			out.append([ev[i + 1], ev[i + 2]])
+	return out
+
+
+## Three waves of one Swarmer each, at 0, 10 and 20 seconds, and nothing to shoot them.
+func _three_waves(per_s: int, cap: int) -> Dictionary:
+	var spec_data: Dictionary = _spec([])
+	spec_data["call_credits_per_s"] = per_s
+	spec_data["call_credits_max"] = cap
+	spec_data["waves"] = []
+	for i in 3:
+		spec_data["waves"].append({"start_ms": i * 10000, "hp_bp": 10000, "credits_bp": 10000, "groups": [_group("swarmer", 1)]})
+	return spec_data
+
+
+func test_calling_a_wave_pays_and_moves_every_later_wave() -> bool:
+	var battle: Battle = _battle(_three_waves(1, 15))
+	expect_eq(battle.wave_starts, PackedInt64Array([0, 200, 400]), "wave starts in ticks")
+	for i in 20:
+		battle.advance()
+	expect_eq(battle.queue_command("call_wave", Vector2i(3, 4)), "", "a call takes no tile")
+	battle.advance()  # tick 20: wave 2 was 180 ticks (9 s) away
+	expect_eq(battle.credits_x100, 900, "1 credit a second skipped")
+	expect_eq(battle.wave_starts, PackedInt64Array([0, 20, 220]), "every wave not yet started moved 180 ticks sooner")
+	expect_eq(_events_of(battle, Battle.Event.CALLED), [[1, 900]], "the event names the wave and the bonus")
+	expect_eq(battle.command_log(), [{"tick": 20, "type": "call_wave", "args": {}}], "the log a replay needs")
+	return true
+
+
+func test_a_call_pays_at_most_the_cap_and_needs_a_wave_to_call() -> bool:
+	var battle: Battle = _battle(_three_waves(1, 5))
+	battle.queue_command("call_wave", Vector2i.ZERO)
+	battle.advance()  # tick 0: wave 2 is 10 s away, but the cap is 5 credits
+	expect_eq(battle.credits_x100, 500, "the cap")
+	expect_eq(battle.wave_starts, PackedInt64Array([0, 0, 200]), "wave 3 moved as far as wave 2")
+	battle.queue_command("call_wave", Vector2i.ZERO)
+	battle.advance()  # tick 1: wave 3, 199 ticks away, capped again
+	expect_eq(battle.credits_x100, 1000, "capped again")
+	battle.queue_command("call_wave", Vector2i.ZERO)
+	battle.advance()  # tick 2: every wave has started
+	expect_eq(battle.refused_commands, 1, "nothing left to call")
+	expect_eq(_events_of(battle, Battle.Event.REFUSED).size(), 1, "a refused event")
+	expect_eq(battle.credits_x100, 1000, "and no pay")
+	return true
+
+
+func test_live_calls_match_the_log() -> bool:
+	var commands: Array = [{"tick": 30, "type": "call_wave", "args": {}}, {"tick": 31, "type": "call_wave", "args": {}}]
+	var logged_data: Dictionary = _three_waves(1, 15)
+	logged_data["commands"] = commands
+	var logged: Dictionary = _battle(logged_data).run()
+	var live: Battle = _battle(_three_waves(1, 15))
+	while live.outcome == Battle.Outcome.RUNNING:
+		if live.tick == 30 or live.tick == 31:
+			expect_eq(live.queue_command("call_wave", Vector2i.ZERO), "", "queued live")
+		live.advance()
+	expect_eq(live.result()["final_hash"], logged["final_hash"], "the same battle either way")
+	expect_eq(live.command_log(), commands, "the log")
+	return true
+
+
+## A Railgun on tile (2, 5), 1.5 tiles beside the lane; it fires every 40 ticks.
+func _railgun_duel(groups: Array, targeting: String) -> Battle:
+	var spec_data: Dictionary = _armed(groups, [_command(0, "place", [2, 5], "railgun")])
+	return _battle(spec_data, _config({}, {"railgun": targeting}))
+
+
+func test_first_shoots_the_leader_and_strongest_the_toughest() -> bool:
+	# A Swarmer leads a Brute down the lane; by the Railgun's second shot both are in range.
+	var groups: Array = [_group("swarmer", 1), _group("carapace_brute", 1)]
+	for targeting: String in ["first", "strongest"]:
+		var battle: Battle = _railgun_duel(groups, targeting)
+		for i in 60:
+			battle.advance()
+		var brute_id: int = 2
+		var target: int = battle.towers[0].target_id
+		if targeting == "first":
+			expect_true(target != brute_id, "first: the Swarmer in front, not the Brute (target %d)" % target)
+		else:
+			expect_eq(target, brute_id, "strongest: the Brute")
+	return true
+
+
+func test_strongest_finishes_the_alien_it_started_on() -> bool:
+	# Two Swarmers a tick apart: a Railgun hit leaves the leader at 15 of 40 HP. Ranked by full
+	# HP the two tie, so the second shot goes to the leader again and kills it; ranked by HP
+	# left it would have gone to the fresh one.
+	var battle: Battle = _railgun_duel([_group("swarmer", 2, 50)], "strongest")
+	for i in 60:
+		battle.advance()
+	expect_eq(battle.kills, 1, "the second shot finished the first Swarmer")
+	return true
+
+
+func test_a_clean_wave_pays_and_a_leaking_one_doesnt() -> bool:
+	var config: SimConfig = _config()
+	var clean_data: Dictionary = _armed([_group("swarmer", 1)], [_command(0, "place", [2, 5], "railgun")])
+	clean_data["clean_wave_credits"] = 15
+	var clean: Battle = _battle(clean_data, config)
+	var done: Array = []
+	while clean.outcome == Battle.Outcome.RUNNING:
+		clean.advance()
+		done.append_array(_events_of(clean, Battle.Event.WAVE_DONE))
+	var paid: int = (1000 - config.tower("railgun").cost_credits) * 100 + config.enemy("swarmer").kill_credits_x100
+	expect_eq(clean.kills, 1, "the Railgun kills it")
+	expect_eq(clean.credits_x100, paid + 1500, "the kill and the clean-wave bonus")
+	expect_eq(done, [[0, 1]], "wave 1 done, clean")
+	var leaky_data: Dictionary = _spec([_group("swarmer", 1)])
+	leaky_data["clean_wave_credits"] = 15
+	var leaky: Battle = _battle(leaky_data, config)
+	done = []
+	while leaky.outcome == Battle.Outcome.RUNNING:
+		leaky.advance()
+		done.append_array(_events_of(leaky, Battle.Event.WAVE_DONE))
+	expect_eq(leaky.credits_x100, 0, "no bonus after a leak")
+	expect_eq(done, [[0, 0]], "wave 1 done, not clean")
+	return true
+
