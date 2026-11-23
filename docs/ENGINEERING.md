@@ -65,6 +65,7 @@ pip install -r tools/requirements.txt
 python3 tools/config_tool.py validate
 python3 tools/gen_vectors.py --check
 python3 tools/gen_battles.py --check
+python3 tools/art/build_art.py --check
 python3 -m pytest -q tools/tests
 python3 tools/check_sim_native.py          # the C++ core: three builds, vectors, goldens, generated battles
 ```

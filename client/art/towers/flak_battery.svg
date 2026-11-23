@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140" viewBox="-70 -70 140 140"><defs>
+<radialGradient id="shell" cx="40%" cy="30%" r="75%">
+  <stop offset="0" stop-color="#9b7dff"/><stop offset="0.55" stop-color="#6b3fe6"/><stop offset="1" stop-color="#35208a"/>
+</radialGradient>
+<radialGradient id="shellDark" cx="50%" cy="40%" r="70%">
+  <stop offset="0" stop-color="#6b3fe6"/><stop offset="1" stop-color="#22145e"/>
+</radialGradient>
+<linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#f4f9ff"/><stop offset="1" stop-color="#a9bdd6"/>
+</linearGradient>
+<radialGradient id="base" cx="50%" cy="40%" r="65%">
+  <stop offset="0" stop-color="#1b2d4d"/><stop offset="1" stop-color="#0d182c"/>
+</radialGradient>
+<radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+  <stop offset="0" stop-color="#ffffff"/><stop offset="0.35" stop-color="#7cf3ff"/><stop offset="1" stop-color="#1f9fc0" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="eyeHalo"><stop offset="0" stop-color="#ffe14d" stop-opacity="0.75"/><stop offset="1" stop-color="#ffe14d" stop-opacity="0"/></radialGradient>
+<radialGradient id="shadow"><stop offset="0" stop-color="#000000" stop-opacity="0.5"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></radialGradient>
+<radialGradient id="halo-swarm"><stop offset="0" stop-color="#a5ef58" stop-opacity="0.8"/><stop offset="1" stop-color="#a5ef58" stop-opacity="0"/></radialGradient><radialGradient id="halo-armored"><stop offset="0" stop-color="#f04b12" stop-opacity="0.8"/><stop offset="1" stop-color="#f04b12" stop-opacity="0"/></radialGradient><radialGradient id="halo-shielded"><stop offset="0" stop-color="#1791c5" stop-opacity="0.8"/><stop offset="1" stop-color="#1791c5" stop-opacity="0"/></radialGradient><radialGradient id="halo-air"><stop offset="0" stop-color="#f6f3eb" stop-opacity="0.8"/><stop offset="1" stop-color="#f6f3eb" stop-opacity="0"/></radialGradient><radialGradient id="halo-cloaked"><stop offset="0" stop-color="#edbbfb" stop-opacity="0.8"/><stop offset="1" stop-color="#edbbfb" stop-opacity="0"/></radialGradient><radialGradient id="halo-titan"><stop offset="0" stop-color="#f08c8e" stop-opacity="0.8"/><stop offset="1" stop-color="#f08c8e" stop-opacity="0"/></radialGradient></defs><path d="M-20 -18 L20 -18 L22 16 L-22 16 Z" fill="url(#metal)" stroke="#7cf3ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /><circle cx="-9" cy="-7" r="6.4" fill="#0d182c" stroke="#a9bdd6" stroke-width="1.6" /><circle cx="-9" cy="-7" r="2.4" fill="#7cf3ff" /><circle cx="9" cy="-7" r="6.4" fill="#0d182c" stroke="#a9bdd6" stroke-width="1.6" /><circle cx="9" cy="-7" r="2.4" fill="#7cf3ff" /><circle cx="-9" cy="7" r="6.4" fill="#0d182c" stroke="#a9bdd6" stroke-width="1.6" /><circle cx="-9" cy="7" r="2.4" fill="#7cf3ff" /><circle cx="9" cy="7" r="6.4" fill="#0d182c" stroke="#a9bdd6" stroke-width="1.6" /><circle cx="9" cy="7" r="2.4" fill="#7cf3ff" /><path d="M-20 -22 L20 -22" fill="none" stroke="#7cf3ff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>

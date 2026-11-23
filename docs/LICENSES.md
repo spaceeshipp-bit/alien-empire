@@ -26,7 +26,7 @@ The Android build (APK and AAB) contains these.
 | [Poing Studios AdMob plugin](https://github.com/poingstudios/godot-admob-plugin) | v5.1.0 | MIT, "Copyright (c) 2020-present Poing Studios" | **Credits** |
 | [Godotx Firebase](https://github.com/godot-x/firebase), Core and Messaging | 3.1.0 | MIT, "Copyright (c) 2026 Paulo Coutinho". The release archive has no LICENSE file; the text is in the repository's `LICENSE`. | **Credits**, with the repository's text |
 | [Google Play Games Services for Godot](https://github.com/godot-sdk-integrations/godot-play-game-services) | v3.4.0 | MIT, "Copyright (c) 2023 Jacob Ibáñez Sánchez" | **Credits** |
-| This project's own code and assets: client, sim, the Play Integrity plugin, tools, config, icon | — | No license granted: the repository is public, but all rights are reserved until the owner chooses otherwise (Q9 in `docs/DECISIONS.md`) | — |
+| This project's own code and assets: client, sim, the Play Integrity plugin, tools, config, icon, the placeholder sprites in `client/art/` (`docs/ASSET_LOG.md`) | — | No license granted: the repository is public, but all rights are reserved until the owner chooses otherwise (Q9 in `docs/DECISIONS.md`) | — |
 
 ### Libraries from Gradle
 
@@ -80,4 +80,6 @@ These run on developers' machines and in CI. None ships in the app.
 | g++ and clang++ (the sim core checks) | GCC 13, Clang 18 | GPL version 3 with the GCC Runtime Library Exception; Apache 2.0 with LLVM Exceptions |
 | xvfb and Mesa (the desktop test's virtual display) | Ubuntu 24.04 packages | X.Org's MIT-style license; MIT, with some parts GPL-2 or MIT |
 | GitHub Actions: checkout, setup-python, setup-java, cache, upload-artifact, download-artifact | v6 to v8 | MIT |
+| Node.js, Playwright and Chromium (render the art preview `docs/art/cast_sheet.png` only; the game's sprites need none of them) | Node 22.23.4, Playwright 1.63.0 | MIT; Apache 2.0; BSD-3-Clause and others |
+| Exo 2 font (text in the art preview only, loaded from Google Fonts; not in the game) | — | SIL Open Font License 1.1 |
 | `gradle/actions` setup-gradle | v6 | MIT, except its optional enhanced cache, which CI doesn't use (D-023) |

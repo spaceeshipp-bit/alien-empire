@@ -1,11 +1,13 @@
 # Builder handoff
 
-Updated 2026-11-11. Read this first, then `docs/ENGINEERING.md` (the standing rules and quality bar), `docs/milestones/M0.md`, `docs/DECISIONS.md` and the "Working rules for the AI builder" in `docs/BUILD_PROMPT.md`. This file is the current plan only: replace each step as it lands. Commits are named by subject, because cherry-picks give them new IDs on the milestone branch.
+Updated 2026-11-23. Read this first, then `docs/ENGINEERING.md` (the standing rules and quality bar), `docs/milestones/M0.md`, `docs/DECISIONS.md` and the "Working rules for the AI builder" in `docs/BUILD_PROMPT.md`. This file is the current plan only: replace each step as it lands. Commits are named by subject, because cherry-picks give them new IDs on the milestone branch.
 
 ## Where things stand
 
 - **M0 is built and green in CI** on `m0-foundations`. `docs/milestones/M0.md` names the green `m0-foundations` run for this code.
-- **M0 is not done.** It's done when the owner's phone shows **Sim tests: ALL CHECKS PASS** and every Plugin Lab check passes (`docs/PLUGINS.md`). Nothing merges into `main` before that. Don't start M1 code on `m0-foundations`.
+- **M0 is not done.** It's done when the owner's phone shows **Sim tests: ALL CHECKS PASS** and every Plugin Lab check passes (`docs/PLUGINS.md`). Nothing merges into `main` before that. Don't put M1 code on `m0-foundations`.
+- **M1 has started, on the builder's session branch** (D-033). The owner asked to be told when the game is ready to test, so M1 uses the recommended answers in `docs/milestones/M1.md`. The session branch no longer matches `m0-foundations`. A fix for M0 goes on the session branch as its own commit and is cherry-picked onto `m0-foundations`; M1 commits are never cherry-picked there.
+- **Placeholder art is in** (D-031, D-032). Sprites drawn in code by `tools/art/sprites.py` are written to `client/art/`, with class colors checked for color-blind players. Final art comes later, when the owner says. The rules are in `docs/ART.md`.
 - **The sim is C++ in a GDExtension** (D-026). GDScript parses and checks inputs and wraps the core. The build prompt's "pure GDScript" line waits on the owner's doc (see Owner actions).
 - **What the phone checks now:**
   - 35 unit tests;
@@ -43,14 +45,15 @@ After the phone passes, only docs may change before the merge. Anything else mea
 3. Run the review protocol over everything since the last review (`docs/ENGINEERING.md`). If a fix touches anything but docs, it needs a new APK and phone run first.
 4. Ask the owner to confirm. Then merge `m0-foundations` into `main` with a merge commit, and branch `m1-pve-slice` from `main`.
 
-### Step 3. M1 PvE slice
+### Step 3. M1 PvE slice (in progress)
 
-The plan is `docs/milestones/M1.md`: scope, the owner's questions with recommendations, defaults, systems with their files and tests, order of work and risks. The owner has it with the M0 phone check.
+The plan is `docs/milestones/M1.md`: scope, the questions with the recommendations M1 uses for now (D-033), defaults, systems with their files and tests, order of work and risks.
 
-1. When the answers arrive, record each in `docs/DECISIONS.md` (Q2, Q3 and Q4 move from open questions to decisions) and update M1.md.
-2. Branch `m1-pve-slice` from `main` once M0 has merged. Not before.
-3. Build in M1.md's order, with the full quality bar on every system. Each rule change raises `SIM_VERSION` and follows "Changing a sim rule" in `docs/ENGINEERING.md`.
-4. The reference model changes character in M1. Combat decides who lives, so it steps tick by tick, but it keeps its own structures, such as brute-force targeting. Keep generated battles small enough for CI.
+1. Build on the session branch in M1.md's order, with the full quality bar on every system. Each rule change raises `SIM_VERSION` and follows "Changing a sim rule" in `docs/ENGINEERING.md`.
+2. The reference model changes character in M1. Combat decides who lives, so it steps tick by tick, but it keeps its own structures, such as brute-force targeting. Keep generated battles small enough for CI.
+3. CI builds an APK for every push, the session branch included. When the battle is playable, tell the owner it's ready to test and which run's APK to install.
+4. If the owner changes an answer, record it in `docs/DECISIONS.md` and update M1.md and the config.
+5. Once M0 has merged into `main`, branch `m1-pve-slice` from `main` (with the owner's go-ahead to push it) and bring the M1 commits across.
 
 ### Later milestones
 
@@ -73,6 +76,7 @@ Follow the build prompt's order. Standing concerns to carry forward:
 | Install the newest APK from `m0-foundations`. Run Sim tests and AdMob (step 1), do the one-time console setup and the other four checks (steps 2 to 7), and send screenshots (step 8). | Finishes M0 | `docs/PLUGINS.md` |
 | Until your upload key exists (step 2), uninstall the old app before installing a newer build: each build has a new throwaway key. | Android refuses to update an app signed with a different key | `docs/PLUGINS.md` step 1 |
 | Update your build prompt's Sim core line | D-026 changed it; the proposed wording is in D-026 | Your build prompt doc |
-| Answer M1's questions: the 3 towers and 3 aliens, field-tower upgrades and selling, lives, jitter, credits, the wave timer, the pressure terms, and when real art arrives (M1-G) | Needed before M1 starts | `docs/milestones/M1.md` |
+| Change any of M1's answers if you want: M1 uses the recommendations for now (D-033) | Optional, any time before the M1 playtest ends | `docs/milestones/M1.md` |
+| Share the concept boards, if you'd like the placeholders to follow them more closely | Optional; final art later (D-031) | `docs/ART.md` |
 | Say which phone is your low-end test phone (M1-D) | M1 must hold 60 fps on a low-end phone | `docs/milestones/M1.md` |
 | Q8, Gradle cache terms | Optional | `docs/DECISIONS.md` |

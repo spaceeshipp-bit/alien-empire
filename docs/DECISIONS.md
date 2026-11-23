@@ -205,14 +205,56 @@ Every design or technical decision, with its date, the options considered and th
 - **Options:** keep godot-cpp's default NDK; link our own copy of the C++ runtime statically into the sim library.
 - **Reason:** the APK holds one C++ runtime, `libc++_shared.so`, and Godot's NDK r29 build supplies it. The sim library imports 20 of its 36 symbols from it. The NDK's docs say ABI compatibility across NDK releases is attempted but "not always possible", and advise building with "the same version of the NDK whenever possible". They also say an app should not use more than one C++ runtime, which rules out a static copy. Android refuses to load a library with an unresolved import, and only the phone would show it. The symbol check found every import resolved in the run 24 APK, built with the old NDK, and catches the next mismatch in CI.
 
+### D-031 · 2026-11-23 · Decent placeholder art now, final art later
+
+- **Decision:** from M1, the game uses designed placeholder sprites instead of bare shapes. They are vector art drawn in code by `tools/art/sprites.py`, in the concept boards' palette, and written to `client/art/` as SVG files that Godot imports. Final art comes later, and the owner decides when; until then the build prompt's style test after M2 stays the default. The sprite rules are in `docs/ART.md`.
+- **Options:** bare shapes until the end of M2, as the build prompt says; finished art now, from AI tools or an artist.
+- **Reason:** the owner's call. They first asked to bring the visual design forward ("a big part of the game is how it looks"), then settled it: "get just a decent place holder for images and we will render final editions later". Sprites drawn in code cost little, raise no license questions and stay sharp on any phone. Final art can replace them file by file without code changes. Proposed wording for the owner's build prompt (Art and audio): "Decent placeholder art, drawn in code, from M1. Final art later, starting with a style test of one tower, one alien and one tile, checked at phone size." `docs/BUILD_PROMPT.md` changes when the owner's doc does (rule 4 in `docs/ENGINEERING.md`).
+
+### D-032 · 2026-11-23 · Class colors chosen with a color-vision check
+
+- **Decision:**
+
+  | Class | Color |
+  | --- | --- |
+  | Swarm | `#a5ef58` |
+  | Armored | `#f04b12` |
+  | Shielded | `#1791c5` |
+  | Air | `#f6f3eb` |
+  | Cloaked | `#edbbfb` |
+  | Titan | `#f08c8e` |
+
+  `tools/art/color_check.py` simulates protanopia, deuteranopia and tritanopia at full strength (Machado and others, 2009). It requires every pair of class colors to stay at least 15 apart in CIEDE2000 under each, and under normal vision. The closest pair is shielded and cloaked under protanopia, 16.3 apart. A tool test runs the check, and also checks the color math against published CIEDE2000 values.
+- **Options:** the first concept colors: green, orange, blue, pale blue, pink and red.
+- **Reason:** the build prompt asks for class colors that work for color-blind players, always paired with a shape or icon. The first colors failed. Shielded and cloaked were 4.0 apart under protanopia, and the cloaked pink was close to the hive's magenta (8.8). The new set came from a search that keeps each class near its hue family (lime, red-orange, blue, white, lavender, coral). It also keeps the class colors away from the ground, the alien shells, and the you, clan, rival, hive and eye colors. Two near misses remain:
+  - cloaked is near your cyan under deuteranopia;
+  - swarm is near the eye yellow under protanopia.
+
+  Class colors appear only on class icons and on aliens' spots and glow, so the icons tell those apart.
+
+### D-033 · 2026-11-23 · M1 starts before the M0 phone check, on the recommended answers
+
+- **Decision:** M1 work starts now on the builder's session branch, not on `m0-foundations`. It uses the recommendations in `docs/milestones/M1.md`:
+  - **Towers and aliens:** the Pulse Turret, Plasma Torch and Railgun, against the Swarmer, Carapace Brute and Skimmer.
+  - **Field towers:** upgrades and selling, with range +5% of the base range per level and a refund of 70% of everything spent.
+  - **Lives:** 20.
+  - **Spawn jitter:** none.
+  - **Credits:** the wave pressure tool sets the starting and kill credits.
+  - **Waves:** start on a timer only.
+  - **Wave pressure:** the terms as M1-F reads them.
+
+  Each is a config value or a small rule the owner can change at the playtest. M1-D, the low-end phone, waits: the performance screen runs on whichever phone the owner tests with.
+- **Options:** wait for the answers and the M0 phone check.
+- **Reason:** the owner asked to be told when the game is ready to test, without answering the questions, and waiting would stall the work. M0 still merges into `main` first, and only after it passes on the owner's phone (rule 9). M1 commits stay off `m0-foundations`. Once M0 merges, the M1 work takes `main` and continues on `m1-pve-slice`.
+
 ## Open questions for the owner
 
 | # | Question | Current default | Needed by |
 | --- | --- | --- | --- |
-| Q1 | How many lives does a leaking Hive Carrier cost? The prompt only gives the Brute's (3). | 1 | M1 |
-| Q2 | How many lives does a PvE stage start with? | Not set | M1 |
-| Q3 | Should real waves use spawn jitter (seeded, 0 to a few hundred ms per spawn)? | Off | M1 |
-| Q4 | Field tower range: +5% of base per level, or compounding? Sell refund: 70% of everything spent, or of the build cost? | Base, everything spent | M2 |
+| Q1 | How many lives does a leaking Hive Carrier cost? The prompt only gives the Brute's (3). | 1 | M2 |
+| Q2 | How many lives does a PvE stage start with? | 20 (D-033) | M1 playtest |
+| Q3 | Should real waves use spawn jitter (seeded, 0 to a few hundred ms per spawn)? | Off (D-033) | M1 playtest |
+| Q4 | Field tower range: +5% of base per level, or compounding? Sell refund: 70% of everything spent, or of the build cost? | Base, everything spent (D-033) | M1 playtest |
 | Q5 | How long does the Ion Disruptor's slow last, and does the Sensor Beacon mark while in range or per hit? | Not set | M2 |
 | Q6 | The game's package name (needs the title). | Test app uses `com.alienempiretd.pluginlab` | First Play upload of the game |
 | Q8 | CI's Gradle cache: keep the MIT-licensed basic cache, or accept Gradle's terms for the enhanced one (D-023)? | Basic | Any time |

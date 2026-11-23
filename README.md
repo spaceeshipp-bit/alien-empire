@@ -2,19 +2,19 @@
 
 A fair-to-play alien tower defense game for Android: PvE tower defense, async PvP raids, a shared sector map and clans. Built milestone by milestone from [`docs/BUILD_PROMPT.md`](docs/BUILD_PROMPT.md); every decision is logged in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
-**Current milestone:** M0 Foundations, on branch `m0-foundations`. Status and next steps: [`docs/milestones/M0.md`](docs/milestones/M0.md). The next milestone's plan and its questions for the owner: [`docs/milestones/M1.md`](docs/milestones/M1.md). Builders start with [`docs/HANDOFF.md`](docs/HANDOFF.md) (the current plan) and [`docs/ENGINEERING.md`](docs/ENGINEERING.md) (the standing rules and quality bar).
+**Current milestones:** M0 Foundations, on branch `m0-foundations`, waits for the owner's phone check: [`docs/milestones/M0.md`](docs/milestones/M0.md). M1, the first playable battle, is in progress on the builder's branch: [`docs/milestones/M1.md`](docs/milestones/M1.md). The look and the art rules: [`docs/ART.md`](docs/ART.md). Builders start with [`docs/HANDOFF.md`](docs/HANDOFF.md) (the current plan) and [`docs/ENGINEERING.md`](docs/ENGINEERING.md) (the standing rules and quality bar).
 
 ## Layout
 
 | Folder | What's in it |
 | --- | --- |
-| `client/` | Godot 4.7.2 phone app. In M0, a test build: on-device sim tests and the Plugin Lab |
+| `client/` | Godot 4.7.2 phone app. In M0, a test build: on-device sim tests and the Plugin Lab. `client/art/` holds the placeholder sprites |
 | `sim/` | The shared, deterministic battle sim (a C++ core with GDScript wrappers, integer math) and its tests. Copied into `client/` and `worker/` by `tools/sync_sim.py` |
 | `worker/` | Headless Godot project that runs the sim: tests now, server-side battle replays from M4 |
 | `server/` | Nakama backend modules (M4) |
 | `config/` | Every balance number, as JSON checked against a schema |
-| `tools/` | Config validator, reference test vectors, the sim's reference model and battle generator, sync and build scripts, CI helpers |
-| `docs/` | Build prompt, decisions, the builder handoff and engineering rules, plugin setup, licenses, milestone reports |
+| `tools/` | Config validator, reference test vectors, the sim's reference model and battle generator, the placeholder art generator (`tools/art/`), sync and build scripts, CI helpers |
+| `docs/` | Build prompt, decisions, the builder handoff and engineering rules, plugin setup, licenses, the art guide and asset log, milestone reports |
 
 ## Quick checks (Python 3.11+)
 
@@ -23,6 +23,7 @@ pip install -r tools/requirements.txt
 python3 tools/config_tool.py validate     # config against the schema and cross-file rules
 python3 -m pytest -q tools/tests          # tool tests, reference vectors, reference model, repo consistency
 python3 tools/gen_battles.py --check       # the committed generated battles match the reference model
+python3 tools/art/build_art.py --check     # the sprites in client/art/ match their generator
 python3 tools/check_sim_native.py          # the C++ core alone: three builds, goldens, generated battles
 ```
 
