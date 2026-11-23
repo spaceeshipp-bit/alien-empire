@@ -78,6 +78,7 @@
       ]
     }
   ],
+  "retarget_ms": 250,
   "field_upgrades": {
     "max_level": 4,
     "first_upgrade_cost_bp": 8000,

@@ -110,3 +110,33 @@ func _mentions(lines: PackedStringArray, text: String) -> bool:
 		if line.contains(text):
 			return true
 	return false
+
+
+func test_towers_resolve_the_counter_chart() -> bool:
+	var config := SimConfig.new()
+	expect_true(config.load_bundle(load_json(BUNDLE)), "loads: %s" % str(config.errors))
+	var pulse: SimConfig.TowerType = config.tower("pulse_turret")
+	var plasma: SimConfig.TowerType = config.tower("plasma_torch")
+	var railgun: SimConfig.TowerType = config.tower("railgun")
+	var armored: int = SimConfig.CLASSES.find("armored")
+	var air: int = SimConfig.CLASSES.find("air")
+	expect_eq(pulse.rating_bp[armored], 5000, "the Pulse Turret is weak against armor")
+	expect_eq(plasma.rating_bp[air], 0, "the Plasma Torch can't hit air")
+	expect_eq(railgun.rating_bp[armored], 15000, "the Railgun is strong against armor")
+	expect_eq(plasma.unrevealed_bp, 5000, "the Plasma Torch hits unrevealed cloaked aliens at half")
+	expect_eq(pulse.unrevealed_bp, 0, "the Pulse Turret needs a reveal")
+	expect_eq(plasma.shield_mult_bp, 5000, "thermal does half to shields")
+	expect_eq(railgun.armor_pierce_bp, 7500, "the Railgun ignores 75% of armor")
+	expect_true(pulse.supported and plasma.supported and railgun.supported, "M1's towers run")
+	expect_true(not config.tower("ion_disruptor").supported, "the Ion Disruptor's slow waits for M2")
+	expect_eq(config.retarget_ticks, 5, "250 ms is 5 ticks")
+	expect_eq(config.enemy("hive_carrier").release_count, 6, "the Hive Carrier releases 6")
+	return true
+
+
+func test_refuses_an_unknown_rating() -> bool:
+	var bundle: Dictionary = load_json(BUNDLE)
+	bundle["data"]["counters"]["counters"]["railgun"]["air"]["rating"] = "devastating"
+	var config := SimConfig.new()
+	expect_true(not config.load_bundle(bundle), "an unknown rating is refused")
+	return true

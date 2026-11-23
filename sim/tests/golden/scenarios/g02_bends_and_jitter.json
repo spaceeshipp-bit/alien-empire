@@ -3,6 +3,9 @@
   "mode": "pve",
   "seed": 20261108,
   "max_ms": 120000,
+  "lives": 1000000,
+  "credits": 0,
+  "towers": [],
   "map": {
     "lanes": [
       {
@@ -63,11 +66,14 @@
           ]
         ]
       }
-    ]
+    ],
+    "build_tiles": []
   },
   "waves": [
     {
       "start_ms": 0,
+      "hp_bp": 10000,
+      "credits_bp": 10000,
       "groups": [
         {
           "enemy": "swarmer",
@@ -89,6 +95,8 @@
     },
     {
       "start_ms": 12000,
+      "hp_bp": 10000,
+      "credits_bp": 10000,
       "groups": [
         {
           "enemy": "carapace_brute",

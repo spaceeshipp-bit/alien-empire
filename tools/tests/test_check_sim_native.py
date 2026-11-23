@@ -45,7 +45,8 @@ def test_generated_battles_are_checked_against_the_model():
     for case in cases:
         if case.valid:
             line = sim_model.run(case).line()
-            assert sum(1 for _, want, c in plan.expect if c is case and want == line) == 2  # fresh and reused
+            # fresh, reused, and with the commands queued live when it has some
+            assert sum(1 for _, want, c in plan.expect if c is case and want == line) == 2 + bool(case.commands)
     assert all(want == csn.Prefix("error") for _, want in refusals)
 
 

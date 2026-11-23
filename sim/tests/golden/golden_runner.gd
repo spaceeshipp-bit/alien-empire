@@ -26,6 +26,7 @@ const SCENARIOS := [
 	"res://sim/tests/golden/scenarios/g02_bends_and_jitter.json",
 	"res://sim/tests/golden/scenarios/g03_air_and_titans.json",
 	"res://sim/tests/golden/scenarios/g04_dense_three_lanes.json",
+	"res://sim/tests/golden/scenarios/g05_field_towers.json",
 ]
 
 
@@ -113,6 +114,12 @@ static func _run_one(path: String, config: SimConfig, expected: Dictionary, reco
 		"final_hash": result["final_hash"],
 		"ticks": result["ticks"],
 		"outcome": result["outcome"],
+		"lives": result["lives"],
+		"credits_x100": result["credits_x100"],
+		"kills": result["kills"],
+		"leaked": result["leaked"],
+		"refused": result["refused"],
+		"spawned": result["spawned"],
 		"checkpoints": result["checkpoints"],
 	}
 	if not expected.has(scenario_name):
@@ -185,7 +192,11 @@ static func _play(row_name: String, kind: String, spec_data: Dictionary, config:
 	return {"row": row, "result": result}
 
 
-## A battle passes only if its outcome, ticks, final hash and every checkpoint
+## The result counts every battle record carries besides its hashes (D-034).
+const COUNTS := ["lives", "credits_x100", "kills", "leaked", "refused", "spawned"]
+
+
+## A battle passes only if its outcome, ticks, counts, final hash and every checkpoint
 ## match. The checkpoints matter on their own: a battle that clears ends with no
 ## aliens on the field, so a mistake in where they walked shows only in them.
 static func _judge(row: Dictionary, want: Dictionary, result: Dictionary) -> void:
@@ -193,13 +204,20 @@ static func _judge(row: Dictionary, want: Dictionary, result: Dictionary) -> voi
 	var want_checkpoints: Variant = want.get("checkpoints", [])
 	if typeof(want_checkpoints) != TYPE_ARRAY:
 		want_checkpoints = []
+	var counts_match: bool = true
+	for key in COUNTS:
+		if int(want.get(key, -1)) != int(result[key]):
+			counts_match = false
 	if (row["expected"] == row["hash"] and String(want.get("outcome", "")) == String(result["outcome"])
-			and int(want.get("ticks", -1)) == int(result["ticks"])
+			and int(want.get("ticks", -1)) == int(result["ticks"]) and counts_match
 			and _same_strings(want_checkpoints, result["checkpoints"])):
 		row["status"] = "PASS"
 	else:
 		row["status"] = "FAIL"
 		row["detail"] = _first_divergence(want_checkpoints, result["checkpoints"])
+		for key in COUNTS:
+			if int(want.get(key, -1)) != int(result[key]):
+				row["detail"] += "; %s expected %s, got %s" % [key, want.get(key, "?"), result[key]]
 
 
 static func _same_strings(a: Array, b: Array) -> bool:

@@ -29,8 +29,9 @@ SCHEMA_BASE = "https://schemas.alien-empire-td.invalid/"
 PARTS = ("manifest", "towers", "enemies", "counters", "damage", "status_effects")
 CLASSES = ("swarm", "armored", "shielded", "air", "cloaked", "titan")
 BUNDLE_FORMAT = 1
-# Command types the sim accepts. M0 defines none; M1 adds field towers.
-KNOWN_COMMANDS: frozenset[str] = frozenset()
+# Command types the sim accepts (D-034).
+KNOWN_COMMANDS: frozenset[str] = frozenset({"place", "upgrade", "sell"})
+MS_PER_TICK = 50
 
 
 class ConfigError(Exception):
@@ -217,12 +218,28 @@ def check_battle(spec: dict[str, Any], data: dict[str, Any]) -> list[str]:
                 errors.append(f"{where}: unknown lane {group['lane']}")
             if enemy and lane and enemy["movement"] == "air" and "air" not in lane:
                 errors.append(f"{where}: air enemy {enemy['id']} needs an air path on lane {lane['id']}")
+    tower_ids = {t["id"] for t in data["towers"]["towers"]}
+    for tid in spec["towers"]:
+        if tid not in tower_ids:
+            errors.append(f"{bid}: unknown tower {tid}")
+    tiles = [tuple(t) for t in spec["map"]["build_tiles"]]
+    if len(tiles) != len(set(tiles)):
+        errors.append(f"{bid}: a build tile is listed twice")
     ticks = [c["tick"] for c in spec["commands"]]
     if ticks != sorted(ticks):
         errors.append(f"{bid}: commands must be in tick order")
-    for command in spec["commands"]:
+    last_tick = spec["max_ms"] // MS_PER_TICK - 1
+    for i, command in enumerate(spec["commands"]):
+        where = f"{bid}: command {i}"
         if command["type"] not in KNOWN_COMMANDS:
-            errors.append(f"{bid}: unknown command type {command['type']}")
+            errors.append(f"{where}: unknown command type {command['type']}")
+            continue
+        if command["tick"] > last_tick:
+            errors.append(f"{where}: tick {command['tick']} is at or after the battle's last tick")
+        if tuple(command["args"]["tile"]) not in set(tiles):
+            errors.append(f"{where}: {command['args']['tile']} isn't a build tile")
+        if command["type"] == "place" and command["args"]["tower"] not in spec["towers"]:
+            errors.append(f"{where}: tower {command['args']['tower']} isn't allowed in this battle")
     return errors
 
 

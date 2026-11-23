@@ -8,9 +8,10 @@ Every build gets the same plan, and must answer every line as expected:
 - the reference vectors (RNG, mul32, isqrt, state hashes) in sim/tests/vectors;
 - the golden battles in sim/tests/golden, each also rerun on a reused battle;
 - generated battles (tools/sim_cases.py), each compared with the reference model
-  (tools/reference/sim_model.py) on outcome, ticks, every checkpoint and the final
-  hash, run twice and on a reused battle. Cases built to break one of the core's
-  limits must be refused.
+  (tools/reference/sim_model.py) on outcome, ticks, lives, credits, kills, leaks,
+  refused commands, every checkpoint and the final hash: run with the command log
+  in the spec, again with each command queued live on its tick, and on a reused
+  battle. Cases built to break one of the core's limits must be refused.
 The builds must also answer identically to each other.
 
 A generated battle that fails is shrunk to a smaller one that still fails, and
@@ -164,6 +165,13 @@ def reuse_answer(result: sim_model.Result) -> str:
     return ("" if result.reuse_had_aliens else "no aliens to test with ") + "rejected yes aliens 0 tick 0"
 
 
+def expected_line(want: dict) -> str:
+    """core_check's answer for a recorded result (expected.json, battles.json)."""
+    return sim_model.result_line(want["outcome"], want["ticks"], want["lives"], want["credits_x100"], want["kills"],
+                                 want["leaked"], want["refused"], want["spawned"], want["final_hash"],
+                                 want["checkpoints"])
+
+
 def add_goldens(plan: Plan) -> int:
     expected_path = GOLDEN / "expected.json"
     if not expected_path.exists():
@@ -181,8 +189,7 @@ def add_goldens(plan: Plan) -> int:
         case = sim_cases.case_from_spec(bundle, load(path), name)
         for line in sim_cases.driver_lines(case):
             plan.send(line)
-        want = expected[name]
-        line = " ".join(["result", want["outcome"], str(want["ticks"]), want["final_hash"], *want["checkpoints"]])
+        line = expected_line(expected[name])
         plan.ask("battle_run", f"golden {name}", line)
         plan.ask(
             "battle_reuse", f"golden {name}: a rejected setup leaves nothing behind", "rejected yes aliens 0 tick 0",
@@ -204,8 +211,7 @@ def add_generated(plan: Plan) -> int:
         case = sim_cases.case_from_spec(bundle, battle["spec"], battle["name"])
         for line in sim_cases.driver_lines(case):
             plan.send(line)
-        want = battle["expected"]
-        line = " ".join(["result", want["outcome"], str(want["ticks"]), want["final_hash"], *want["checkpoints"]])
+        line = expected_line(battle["expected"])
         plan.ask("battle_run", f"generated battle {battle['name']} (sim/tests/generated)", line)
     return len(doc["battles"])
 
@@ -219,6 +225,8 @@ def add_case(plan: Plan, case: sim_cases.Case, label: str) -> None:
     want = sim_model.run(case)
     line = want.line()
     plan.ask("battle_run", f"{label}: matches the reference model", line, case=case)
+    if case.commands:
+        plan.ask("battle_live", f"{label}: commands queued live give the same battle", line, case=case)
     plan.ask(
         "battle_reuse", f"{label}: a rejected setup leaves nothing behind", reuse_answer(want),
         (f"{label}: rerun on the same battle", line), case=case,

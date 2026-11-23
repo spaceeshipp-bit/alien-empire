@@ -1,6 +1,7 @@
 extends "res://sim/tests/test_case.gd"
-## Battle skeleton tests. Where a test depends on a speed, it sets that speed
-## itself, so retuning the config never breaks these tests.
+## Battle tests: spawning, movement and leaks, then field towers, commands,
+## damage and credits (D-034). Where a test depends on a speed or a price, it
+## sets or reads it itself, so retuning the config never breaks these tests.
 
 const SimConfig := preload("res://sim/core/sim_config.gd")
 const BattleSpec := preload("res://sim/core/battle_spec.gd")
@@ -25,14 +26,38 @@ func _spec(groups: Array, lane_mt: int = 20000) -> Dictionary:
 		"mode": "pve",
 		"seed": 1,
 		"max_ms": 600000,
-		"map": {"lanes": [{
-			"id": "a",
-			"ground": [[1000, 0], [1000, lane_mt]],
-			"air": [[2000, 0], [2000, lane_mt / 2]],
-		}]},
-		"waves": [{"start_ms": 0, "groups": groups}],
+		"lives": 20,
+		"credits": 0,
+		"towers": [],
+		"map": {
+			"lanes": [{
+				"id": "a",
+				"ground": [[1000, 0], [1000, lane_mt]],
+				"air": [[2000, 0], [2000, lane_mt / 2]],
+			}],
+			"build_tiles": [],
+		},
+		"waves": [{"start_ms": 0, "hp_bp": 10000, "credits_bp": 10000, "groups": groups}],
 		"commands": [],
 	}
+
+
+## _spec with field towers: three build tiles beside the lane, which runs down
+## x = 1000. Tile (2, 5) is centered 1.5 tiles from it.
+func _armed(groups: Array, commands: Array, credits: int = 1000, towers: Array = ["plasma_torch", "pulse_turret", "railgun"]) -> Dictionary:
+	var spec_data: Dictionary = _spec(groups)
+	spec_data["credits"] = credits
+	spec_data["towers"] = towers
+	spec_data["map"]["build_tiles"] = [[2, 5], [2, 9], [0, 12]]
+	spec_data["commands"] = commands
+	return spec_data
+
+
+func _command(tick: int, kind: String, tile: Array, tower: String = "") -> Dictionary:
+	var args := {"tile": tile}
+	if kind == "place":
+		args["tower"] = tower
+	return {"tick": tick, "type": kind, "args": args}
 
 
 func _group(enemy: String, count: int, interval_ms: int = 500, jitter_ms: int = 0) -> Dictionary:
@@ -120,6 +145,17 @@ func test_leak_costs_lives_and_clears() -> bool:
 	expect_eq(result["ticks"], 20, "100 mt per tick over 2000 mt")
 	expect_eq(result["leaked"], 1, "leaked")
 	expect_eq(result["leaked_lives"], config.enemy("swarmer").leak_lives, "lives lost")
+	expect_eq(result["lives"], 20 - config.enemy("swarmer").leak_lives, "lives left")
+	return true
+
+
+func test_lost_when_lives_run_out() -> bool:
+	var spec_data: Dictionary = _spec([_group("swarmer", 5, 0)], 2000)
+	spec_data["lives"] = 2
+	var result: Dictionary = _battle(spec_data, _config({"swarmer": 2000})).run()
+	expect_eq(result["outcome"], "lost", "outcome")
+	expect_eq(result["lives"], 0, "lives stop at 0")
+	expect_eq(result["leaked"], 5, "the leak that ends it happens with the rest of its tick")
 	return true
 
 
@@ -189,9 +225,143 @@ func test_spec_refuses_off_grid_times() -> bool:
 	return true
 
 
-func test_spec_refuses_commands_for_now() -> bool:
-	var spec_data: Dictionary = _spec([_group("swarmer", 1)])
-	spec_data["commands"] = [{"tick": 0, "type": "place_tower", "args": {}}]
+func test_spec_refuses_bad_commands() -> bool:
+	var bad := {
+		"an unknown type": _command(0, "launch", [2, 5]),
+		"a tile that isn't a build tile": _command(0, "place", [3, 5], "pulse_turret"),
+		"a tower this battle doesn't allow": _command(0, "place", [2, 5], "flak_battery"),
+		"a tick at the end": _command(12000, "upgrade", [2, 5]),
+		"an extra field": {"tick": 0, "type": "sell", "args": {"tile": [2, 5], "tower": "railgun"}},
+		"no tile": {"tick": 0, "type": "sell", "args": {}},
+	}
+	for what in bad:
+		var spec := BattleSpec.new()
+		expect_true(not spec.parse(_armed([_group("swarmer", 1)], [bad[what]])), "refuses " + what)
 	var spec := BattleSpec.new()
-	expect_true(not spec.parse(spec_data), "M0 knows no command types")
+	var out_of_order: Array = [_command(5, "upgrade", [2, 5]), _command(4, "sell", [2, 5])]
+	expect_true(not spec.parse(_armed([_group("swarmer", 1)], out_of_order)), "refuses ticks out of order")
+	return true
+
+
+func test_tower_kills_pay_credits() -> bool:
+	var config: SimConfig = _config()
+	var spec_data: Dictionary = _armed([_group("swarmer", 6, 500)], [_command(0, "place", [2, 5], "pulse_turret")])
+	var result: Dictionary = _battle(spec_data, config).run()
+	var cost: int = config.tower("pulse_turret").cost_credits
+	var pay: int = config.enemy("swarmer").kill_credits_x100
+	expect_true(result["kills"] > 0, "the turret kills some of them")
+	expect_eq(result["credits_x100"], (1000 - cost) * 100 + result["kills"] * pay, "credits: the build cost out, kills in")
+	expect_eq(result["kills"] + result["leaked"], 6, "every swarmer dies or leaks")
+	expect_eq(result["refused"], 0, "nothing refused")
+	return true
+
+
+func test_refused_commands_change_nothing_but_the_count() -> bool:
+	# The aliens arrive a minute in, so only the commands act in the first ticks.
+	var late: Dictionary = _group("swarmer", 1)
+	late["offset_ms"] = 60000
+	var commands: Array = [
+		_command(0, "place", [2, 9], "railgun"),  # 200 > 150: not enough credits
+		_command(0, "place", [2, 5], "pulse_turret"),  # 100: leaves 50
+		_command(1, "place", [2, 5], "pulse_turret"),  # taken
+		_command(2, "upgrade", [2, 9]),  # empty
+		_command(3, "sell", [0, 12]),  # empty
+		_command(4, "upgrade", [2, 5]),  # 80 > 50
+		_command(5, "sell", [2, 5]),  # returns 70% of 100
+	]
+	var config: SimConfig = _config()
+	var battle: Battle = _battle(_armed([late], commands, 150), config)
+	for i in 10:
+		battle.advance()
+	var refund: int = 100 * config.tower("pulse_turret").cost_credits * int(config.upgrades.sell_refund_bp) / 10000
+	expect_eq(battle.refused_commands, 5, "refused")
+	expect_eq(battle.credits_x100, 5000 + refund, "credits")
+	expect_eq(battle.towers.size(), 0, "towers left")
+	return true
+
+
+func test_upgrades_follow_the_config_and_sell_returns_its_share() -> bool:
+	var config: SimConfig = _config()
+	var commands: Array = [_command(0, "place", [2, 5], "pulse_turret")]
+	for t in range(1, 5):
+		commands.append(_command(t, "upgrade", [2, 5]))
+	var late: Dictionary = _group("swarmer", 1)
+	late["offset_ms"] = 60000
+	var battle: Battle = _battle(_armed([late], commands, 1000), config)
+	var spent: int = config.tower("pulse_turret").cost_credits * 100
+	for level in range(1, int(config.upgrades.max_level)):
+		spent += config.upgrade_cost_x100("pulse_turret", level)
+	for i in 6:
+		battle.advance()
+	var tower: Dictionary = battle.towers[0]
+	expect_eq(tower.level, int(config.upgrades.max_level), "level")
+	expect_eq(tower.spent_x100, spent, "spent matches the loader's upgrade costs")
+	expect_eq(tower.upgrade_cost_x100, -1, "no upgrade past the top level")
+	expect_eq(battle.refused_commands, 4 - (int(config.upgrades.max_level) - 1), "upgrades past the top are refused")
+	expect_eq(battle.credits_x100, 100000 - spent, "credits")
+	expect_eq(tower.refund_x100, spent * int(config.upgrades.sell_refund_bp) / 10000, "refund: a share of everything spent")
+	return true
+
+
+func test_live_commands_match_the_log() -> bool:
+	var commands: Array = [
+		_command(0, "place", [2, 5], "plasma_torch"), _command(40, "place", [2, 9], "railgun"),
+		_command(90, "upgrade", [2, 5]), _command(200, "sell", [2, 9]), _command(201, "place", [2, 9], "pulse_turret"),
+	]
+	var groups: Array = [_group("swarmer", 12, 250), _group("carapace_brute", 2, 3000)]
+	var logged: Dictionary = _battle(_armed(groups, commands, 600)).run()
+	var live: Battle = _battle(_armed(groups, [], 600))
+	var next: int = 0
+	while live.outcome == Battle.Outcome.RUNNING:
+		while next < commands.size() and int(commands[next]["tick"]) == live.tick:
+			var c: Dictionary = commands[next]
+			var problem: String = live.queue_command(c["type"], Vector2i(c["args"]["tile"][0], c["args"]["tile"][1]), c["args"].get("tower", ""))
+			expect_eq(problem, "", "queued live")
+			next += 1
+		live.advance()
+	expect_eq(live.result()["final_hash"], logged["final_hash"], "the same battle either way")
+	expect_eq(live.command_log(), commands, "the log a replay needs")
+	return true
+
+
+func test_queue_command_refuses_the_past_and_unknown_towers() -> bool:
+	var battle: Battle = _battle(_armed([_group("swarmer", 3)], []))
+	for i in 5:
+		battle.advance()
+	expect_true(battle.queue_command("upgrade", Vector2i(2, 5), "", 2) != "", "a tick already run")
+	expect_true(battle.queue_command("place", Vector2i(2, 5), "no_such_tower") != "", "an unknown tower")
+	expect_true(battle.queue_command("place", Vector2i(3, 3), "pulse_turret") != "", "not a build tile")
+	expect_eq(battle.queue_command("place", Vector2i(2, 5), "pulse_turret"), "", "a good one")
+	return true
+
+
+func test_plasma_torch_cant_hit_air() -> bool:
+	var spec_data: Dictionary = _armed([_group("skimmer", 4, 500)], [_command(0, "place", [2, 5], "plasma_torch")], 1000, ["plasma_torch"])
+	spec_data["map"]["build_tiles"] = [[2, 5]]
+	# The air route runs down x = 2000, half a tile from the torch's tile center.
+	var result: Dictionary = _battle(spec_data).run()
+	expect_eq(result["kills"], 0, "no kills")
+	expect_eq(result["leaked"], 4, "every skimmer leaks")
+	return true
+
+
+func test_hive_carrier_releases_swarmers() -> bool:
+	var config: SimConfig = _config()
+	var carrier: Dictionary = _group("hive_carrier", 1)
+	var spec_data: Dictionary = _armed([carrier], [_command(0, "place", [2, 5], "railgun"), _command(0, "place", [2, 9], "railgun")], 1000)
+	spec_data["waves"][0]["hp_bp"] = 1  # a carrier that dies to its shield breaking
+	var result: Dictionary = _battle(spec_data, config).run()
+	var release: SimConfig.EnemyType = config.enemy("hive_carrier")
+	expect_eq(release.release_id, "swarmer", "it releases swarmers")
+	expect_true(result["kills"] >= 1, "the carrier dies")
+	expect_eq(result["spawned"], 1 + release.release_count, "the carrier and what it released")
+	return true
+
+
+func test_towers_with_abilities_wait_for_m2() -> bool:
+	var spec := BattleSpec.new()
+	expect_true(spec.parse(_armed([_group("swarmer", 1)], [], 1000, ["ion_disruptor"])), "the spec itself is fine")
+	var battle := Battle.new()
+	expect_true(not battle.setup(_config(), spec), "setup refuses a tower whose slow isn't in this sim version")
+	expect_true("ability" in str(battle.errors), "and says why: %s" % str(battle.errors))
 	return true

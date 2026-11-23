@@ -136,16 +136,21 @@ def minimal_battle():
         "mode": "pve",
         "seed": 1,
         "max_ms": 10000,
-        "map": {"lanes": [{"id": "a", "ground": [[0, 0], [0, 5000]]}]},
+        "lives": 20,
+        "credits": 300,
+        "towers": ["pulse_turret"],
+        "map": {"lanes": [{"id": "a", "ground": [[0, 0], [0, 5000]]}], "build_tiles": [[1, 2]]},
         "waves": [
             {
                 "start_ms": 0,
+                "hp_bp": 10000,
+                "credits_bp": 10000,
                 "groups": [
                     {"enemy": "swarmer", "lane": "a", "count": 2, "offset_ms": 0, "interval_ms": 500, "jitter_ms": 0}
                 ],
             }
         ],
-        "commands": [],
+        "commands": [{"tick": 0, "type": "place", "args": {"tower": "pulse_turret", "tile": [1, 2]}}],
     }
 
 
@@ -166,15 +171,32 @@ def test_battle_reference_errors(data):
     group = spec["waves"][0]["groups"][0]
     group["enemy"] = "skimmer"
     spec["map"]["lanes"][0]["ground"].append([0, 5000])
+    spec["towers"] = ["pulse_turret", "laser_fence"]
+    spec["map"]["build_tiles"].append([1, 2])
     spec["commands"] = [
-        {"tick": 5, "type": "place_tower", "args": {}},
-        {"tick": 2, "type": "place_tower", "args": {}},
+        {"tick": 5, "type": "place", "args": {"tower": "railgun", "tile": [1, 2]}},
+        {"tick": 2, "type": "upgrade", "args": {"tile": [7, 7]}},
+        {"tick": 200, "type": "sell", "args": {"tile": [1, 2]}},
     ]
     errors = ct.check_battle(spec, data)
     assert "t: wave 0 group 0: air enemy skimmer needs an air path on lane a" in errors
     assert "t: lane a ground path repeats point [0, 5000]" in errors
     assert "t: commands must be in tick order" in errors
-    assert "t: unknown command type place_tower" in errors
+    assert "t: unknown tower laser_fence" in errors
+    assert "t: a build tile is listed twice" in errors
+    assert "t: command 0: tower railgun isn't allowed in this battle" in errors
+    assert "t: command 1: [7, 7] isn't a build tile" in errors
+    assert "t: command 2: tick 200 is at or after the battle's last tick" in errors
+
+
+def test_battle_schema_checks_command_arguments(registry):
+    spec = minimal_battle()
+    spec["commands"] = [{"tick": 0, "type": "sell", "args": {"tile": [1, 2], "tower": "pulse_turret"}}]
+    assert ct.schema_errors("battle", spec, registry, "t")
+    spec["commands"] = [{"tick": 0, "type": "place", "args": {"tile": [1, 2]}}]
+    assert ct.schema_errors("battle", spec, registry, "t")
+    spec["commands"] = [{"tick": 0, "type": "launch", "args": {"tile": [1, 2]}}]
+    assert ct.schema_errors("battle", spec, registry, "t")
 
 
 def test_battle_unknown_enemy_and_lane(data):

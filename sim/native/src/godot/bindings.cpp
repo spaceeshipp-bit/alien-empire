@@ -86,7 +86,28 @@ struct Reader {
 	}
 };
 
-const char *OUTCOME_NAMES[] = { "running", "cleared", "timed_out" };
+const char *OUTCOME_NAMES[] = { "running", "cleared", "timed_out", "lost" };
+constexpr int64_t ALIEN_VIEW_STRIDE = 10;
+
+sim::Command read_command(Reader &r, const Dictionary &d, const std::string &where) {
+	sim::Command c;
+	c.tick = r.get_int(d, "tick", where);
+	c.kind = r.get_int(d, "kind", where);
+	c.tower_index = r.get_int(d, "tower_index", where);
+	c.col = r.get_int(d, "col", where);
+	c.row = r.get_int(d, "row", where);
+	return c;
+}
+
+Dictionary command_dict(const sim::Command &c) {
+	Dictionary d;
+	d["tick"] = c.tick;
+	d["kind"] = c.kind;
+	d["tower_index"] = c.tower_index;
+	d["col"] = c.col;
+	d["row"] = c.row;
+	return d;
+}
 
 } // namespace
 
@@ -97,6 +118,8 @@ void SimNative::_bind_methods() {
 	ClassDB::bind_static_method("SimNative", D_METHOD("mul32", "a", "b"), &SimNative::mul32);
 	ClassDB::bind_integer_constant(get_class_static(), "", "SIM_VERSION", sim::SIM_VERSION);
 	ClassDB::bind_integer_constant(get_class_static(), "", "TICK_RATE", sim::TICK_RATE);
+	ClassDB::bind_integer_constant(get_class_static(), "", "ALIEN_VIEW_STRIDE", ALIEN_VIEW_STRIDE);
+	ClassDB::bind_integer_constant(get_class_static(), "", "SHOT_CHARGE", sim::Battle::SHOT_CHARGE);
 }
 
 int64_t SimNative::isqrt(int64_t n) {
@@ -214,6 +237,7 @@ PackedInt64Array SimNativeLanePath::get_starts() const {
 
 void SimNativeBattle::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("setup", "config", "spec"), &SimNativeBattle::setup);
+	ClassDB::bind_method(D_METHOD("queue_command", "command"), &SimNativeBattle::queue_command);
 	ClassDB::bind_method(D_METHOD("advance"), &SimNativeBattle::advance);
 	ClassDB::bind_method(D_METHOD("run"), &SimNativeBattle::run);
 	ClassDB::bind_method(D_METHOD("result"), &SimNativeBattle::result);
@@ -227,6 +251,15 @@ void SimNativeBattle::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_checkpoints"), &SimNativeBattle::get_checkpoints);
 	ClassDB::bind_method(D_METHOD("get_errors"), &SimNativeBattle::get_errors);
 	ClassDB::bind_method(D_METHOD("get_aliens"), &SimNativeBattle::get_aliens);
+	ClassDB::bind_method(D_METHOD("get_lives"), &SimNativeBattle::get_lives);
+	ClassDB::bind_method(D_METHOD("get_credits_x100"), &SimNativeBattle::get_credits_x100);
+	ClassDB::bind_method(D_METHOD("get_kills"), &SimNativeBattle::get_kills);
+	ClassDB::bind_method(D_METHOD("get_refused_commands"), &SimNativeBattle::get_refused_commands);
+	ClassDB::bind_method(D_METHOD("get_towers"), &SimNativeBattle::get_towers);
+	ClassDB::bind_method(D_METHOD("get_alien_view"), &SimNativeBattle::get_alien_view);
+	ClassDB::bind_method(D_METHOD("get_events"), &SimNativeBattle::get_events);
+	ClassDB::bind_method(D_METHOD("upgrade_cost_x100", "type_index", "level"), &SimNativeBattle::upgrade_cost_x100);
+	ClassDB::bind_method(D_METHOD("get_commands"), &SimNativeBattle::get_commands);
 }
 
 bool SimNativeBattle::setup(const Dictionary &config, const Dictionary &spec) {
@@ -246,12 +279,64 @@ bool SimNativeBattle::setup(const Dictionary &config, const Dictionary &spec) {
 		e.speed_mtps = r.get_int(d, "speed_mtps", where);
 		e.air = r.get_bool(d, "air", where);
 		e.leak_lives = r.get_int(d, "leak_lives", where);
+		e.class_index = r.get_int(d, "class_index", where);
+		e.kill_credits_x100 = r.get_int(d, "kill_credits_x100", where);
+		e.release_index = r.get_int(d, "release_index", where);
+		e.release_count = r.get_int(d, "release_count", where);
+		e.supported = r.get_bool(d, "supported", where);
 		c.enemies.push_back(e);
 	}
+	const Array towers = r.get_array(config, "towers", "config");
+	for (int64_t i = 0; i < towers.size(); i++) {
+		const std::string where = "config.towers[" + std::to_string(i) + "]";
+		const Dictionary d = r.item(towers, i, "config.towers");
+		sim::TowerType t;
+		t.cost_credits = r.get_int(d, "cost_credits", where);
+		t.damage_x100 = r.get_int(d, "damage_x100", where);
+		t.shots_per_s_x100 = r.get_int(d, "shots_per_s_x100", where);
+		t.range_mt = r.get_int(d, "range_mt", where);
+		t.splash_mt = r.get_int(d, "splash_mt", where);
+		t.shield_mult_bp = r.get_int(d, "shield_mult_bp", where);
+		t.pierce_bp = r.get_int(d, "pierce_bp", where);
+		const PackedInt64Array ratings = r.get_ints(d, "rating_bp", where);
+		if (ratings.size() != int64_t(sim::CLASS_COUNT)) {
+			errors.push_back(where + ".rating_bp: needs one rating per class");
+		} else {
+			for (size_t k = 0; k < sim::CLASS_COUNT; k++) {
+				t.rating_bp[k] = ratings[int64_t(k)];
+			}
+		}
+		t.unrevealed_bp = r.get_int(d, "unrevealed_bp", where);
+		t.supported = r.get_bool(d, "supported", where);
+		c.towers.push_back(t);
+	}
+	const Dictionary up = r.has(config, "upgrades", Variant::DICTIONARY, "config") ? as<Dictionary>(config["upgrades"]) : Dictionary();
+	c.upgrades.max_level = r.get_int(up, "max_level", "config.upgrades");
+	c.upgrades.first_upgrade_cost_bp = r.get_int(up, "first_upgrade_cost_bp", "config.upgrades");
+	c.upgrades.cost_growth_bp = r.get_int(up, "cost_growth_bp", "config.upgrades");
+	c.upgrades.damage_growth_bp = r.get_int(up, "damage_growth_bp", "config.upgrades");
+	c.upgrades.range_step_bp = r.get_int(up, "range_step_bp", "config.upgrades");
+	c.upgrades.sell_refund_bp = r.get_int(up, "sell_refund_bp", "config.upgrades");
+	c.damage.armor_constant = r.get_int(config, "armor_constant", "config");
+	c.damage.max_reduction_bp = r.get_int(config, "max_reduction_bp", "config");
+	c.damage.min_damage_x100 = r.get_int(config, "min_damage_x100", "config");
+	c.regen_per_second_x100 = r.get_int(config, "regen_per_second_x100", "config");
+	c.regen_delay_ticks = r.get_int(config, "regen_delay_ticks", "config");
+	c.retarget_ticks = r.get_int(config, "retarget_ticks", "config");
 	sim::BattleSpec s;
 	s.battle_id = r.get_string(spec, "battle_id", "spec");
 	s.seed = r.get_int(spec, "seed", "spec");
 	s.max_ticks = r.get_int(spec, "max_ticks", "spec");
+	s.lives = r.get_int(spec, "lives", "spec");
+	s.credits = r.get_int(spec, "credits", "spec");
+	s.tower_set = to_vector(r.get_ints(spec, "tower_set", "spec"));
+	const PackedInt64Array tiles = r.get_ints(spec, "build_tiles", "spec");
+	if (tiles.size() % 2 != 0) {
+		errors.push_back("spec.build_tiles: needs column, row pairs");
+	}
+	for (int64_t i = 0; i + 1 < tiles.size(); i += 2) {
+		s.build_tiles.push_back({ tiles[i], tiles[i + 1] });
+	}
 	const Array lanes = r.get_array(spec, "lanes", "spec");
 	for (int64_t i = 0; i < lanes.size(); i++) {
 		const std::string where = "spec.lanes[" + std::to_string(i) + "]";
@@ -276,7 +361,13 @@ bool SimNativeBattle::setup(const Dictionary &config, const Dictionary &spec) {
 		g.first_tick = r.get_int(d, "first_tick", where);
 		g.interval_ticks = r.get_int(d, "interval_ticks", where);
 		g.jitter_ticks = r.get_int(d, "jitter_ticks", where);
+		g.hp_bp = r.get_int(d, "hp_bp", where);
+		g.credits_bp = r.get_int(d, "credits_bp", where);
 		s.groups.push_back(g);
+	}
+	const Array commands = r.get_array(spec, "commands", "spec");
+	for (int64_t i = 0; i < commands.size(); i++) {
+		s.commands.push_back(read_command(r, r.item(commands, i, "spec.commands"), "spec.commands[" + std::to_string(i) + "]"));
 	}
 	if (!errors.empty()) {
 		battle.reset();
@@ -286,6 +377,16 @@ bool SimNativeBattle::setup(const Dictionary &config, const Dictionary &spec) {
 	}
 	ready = battle.setup(std::move(c), std::move(s));
 	return ready;
+}
+
+String SimNativeBattle::queue_command(const Dictionary &command) {
+	std::vector<std::string> errors;
+	Reader r{ errors };
+	const sim::Command c = read_command(r, command, "command");
+	if (!errors.empty()) {
+		return to_godot(errors.front());
+	}
+	return to_godot(battle.queue_command(c));
 }
 
 void SimNativeBattle::advance() {
@@ -309,6 +410,10 @@ Dictionary SimNativeBattle::result() const {
 	d["spawned"] = battle.spawned_count;
 	d["leaked"] = battle.leaked_count;
 	d["leaked_lives"] = battle.leaked_lives;
+	d["lives"] = battle.lives;
+	d["credits_x100"] = battle.credits_x100;
+	d["kills"] = battle.kills;
+	d["refused"] = battle.refused_commands;
 	d["final_hash"] = state_hash();
 	Array checkpoints;
 	for (const std::string &c : battle.checkpoints) {
@@ -355,7 +460,82 @@ Array SimNativeBattle::get_aliens() const {
 		d["shield_x100"] = a.shield_x100;
 		d["x"] = pos.x;
 		d["y"] = pos.y;
+		d["class_index"] = a.class_index;
+		d["max_hp_x100"] = a.max_hp_x100;
+		d["max_shield_x100"] = a.max_shield_x100;
+		d["kill_credits_x100"] = a.kill_credits_x100;
 		out.push_back(d);
+	}
+	return out;
+}
+
+Array SimNativeBattle::get_towers() const {
+	Array out;
+	for (const sim::Tower &t : battle.towers) {
+		Dictionary d;
+		d["id"] = t.id;
+		d["type_index"] = t.type_index;
+		d["level"] = t.level;
+		d["col"] = t.col;
+		d["row"] = t.row;
+		d["x"] = t.x;
+		d["y"] = t.y;
+		d["charge"] = t.charge;
+		d["target_id"] = t.target_id;
+		d["damage_x100"] = t.damage_x100;
+		d["range_mt"] = t.range_mt;
+		d["spent_x100"] = t.spent_x100;
+		d["refund_x100"] = battle.refund_x100(t);
+		d["upgrade_cost_x100"] =
+				t.level < battle.config().upgrades.max_level ? battle.upgrade_cost_x100(t.type_index, t.level) : int64_t(-1);
+		out.push_back(d);
+	}
+	return out;
+}
+
+PackedInt64Array SimNativeBattle::get_alien_view() const {
+	PackedInt64Array out;
+	out.resize(int64_t(battle.aliens.size()) * ALIEN_VIEW_STRIDE);
+	int64_t *w = out.ptrw();
+	for (const sim::Alien &a : battle.aliens) {
+		*w++ = a.id;
+		*w++ = a.type_index;
+		*w++ = a.class_index;
+		*w++ = a.air ? 1 : 0;
+		*w++ = a.x;
+		*w++ = a.y;
+		*w++ = a.hp_x100;
+		*w++ = a.max_hp_x100;
+		*w++ = a.shield_x100;
+		*w++ = a.max_shield_x100;
+	}
+	return out;
+}
+
+PackedInt64Array SimNativeBattle::get_events() const {
+	PackedInt64Array out;
+	out.resize(int64_t(battle.events.size()) * 5);
+	int64_t *w = out.ptrw();
+	for (const sim::Event &e : battle.events) {
+		*w++ = e.kind;
+		*w++ = e.a;
+		*w++ = e.b;
+		*w++ = e.x;
+		*w++ = e.y;
+	}
+	return out;
+}
+
+int64_t SimNativeBattle::upgrade_cost_x100(int64_t type_index, int64_t level) const {
+	ERR_FAIL_COND_V_MSG(!ready || type_index < 0 || type_index >= int64_t(battle.config().towers.size()), -1,
+			"SimNativeBattle.upgrade_cost_x100: no such tower type");
+	return battle.upgrade_cost_x100(type_index, level);
+}
+
+Array SimNativeBattle::get_commands() const {
+	Array out;
+	for (const sim::Command &c : battle.spec().commands) {
+		out.push_back(command_dict(c));
 	}
 	return out;
 }

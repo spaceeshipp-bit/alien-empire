@@ -26,6 +26,7 @@
         "speed_mtps",
         "movement",
         "leak_lives",
+        "kill_credits_x100",
         "abilities"
       ],
       "properties": {
@@ -58,6 +59,10 @@
           "type": "integer",
           "minimum": 1,
           "description": "Lives lost when it reaches the Core."
+        },
+        "kill_credits_x100": {
+          "$ref": "common.schema.json#/$defs/x100",
+          "description": "Battle credits for killing it, times 100, before its wave's scaling (the battle spec's credits_bp, which a stage grows x1.03 per wave)."
         },
         "abilities": {
           "type": "array",

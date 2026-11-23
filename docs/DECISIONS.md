@@ -245,7 +245,63 @@ Every design or technical decision, with its date, the options considered and th
 
   Each is a config value or a small rule the owner can change at the playtest. M1-D, the low-end phone, waits: the performance screen runs on whichever phone the owner tests with.
 - **Options:** wait for the answers and the M0 phone check.
-- **Reason:** the owner asked to be told when the game is ready to test, without answering the questions, and waiting would stall the work. M0 still merges into `main` first, and only after it passes on the owner's phone (rule 9). M1 commits stay off `m0-foundations`. Once M0 merges, the M1 work takes `main` and continues on `m1-pve-slice`.
+- **Reason:** the owner asked to be told when the game is ready to test, without answering the questions, and waiting would stall the work. The build prompt says not to start the next milestone until the current one's tests pass. This departs from that, so the owner hears about it and can stop it at any time. Nothing M1 builds can merge before M0 does: M0 still merges into `main` first, and only after it passes on the owner's phone (rule 9). M1 commits stay off `m0-foundations`. Once M0 merges, the M1 work takes `main` and continues on `m1-pve-slice`.
+
+### D-034 · 2026-11-23 · The combat rules of sim version 2
+
+- **Decision:** M1's combat, as `tools/reference/sim_model.py` states it in full.
+  - **Battle inputs:**
+    - the battle spec adds starting `lives`, starting `credits`, the towers the player may build, the build tiles, and two numbers per wave: `hp_bp` scales its aliens' HP and `credits_bp` their kill credits;
+    - the config adds `kill_credits_x100` for each alien and `retarget_ms` for towers.
+  - **Credits:** stored ×100. A tower stands at its tile's center.
+  - **Each tick, in order:**
+    1. The commands for that tick are applied, in log order.
+    2. Aliens spawn. HP scales with the wave; shields don't.
+    3. Aliens move, and leaks cost lives, which stop at 0.
+    4. Shields regenerate.
+    5. Towers act in id order, then dead aliens leave.
+    6. The counter rises; then come the checkpoint and the outcome. The battle is **lost** at 0 lives, **cleared** when everything has spawned and nothing is left, and otherwise **timed out** at `max_ticks`.
+  - **Firing:**
+    - A tower charges `shots_per_s_x100` a tick and fires at 2,000. Its charge waits at 2,000 while it has no target. A new tower starts charged.
+    - When ready, it keeps its target while that target is alive, in range and hittable, and its re-pick time hasn't come. Otherwise it picks again among every hittable alien in range: the one with the least distance left to the Core, ties to the lower id. It then waits `retarget_ms` before its next re-pick.
+    - **Range:** squared distances, compared with integers.
+    - **Hittable:** the counter rating isn't 0. An unrevealed cloaked alien also needs a non-zero `unrevealed_damage_bp`. In this version nothing reveals.
+    - **Splash** hits every hittable alien within the radius of the target, including the target, in id order.
+    - Hits land on the tick the tower fires.
+  - **Damage pipeline** (steps 1, 3, 5, 6 and 7 of the build prompt), each multiplication truncated:
+    - **Level damage:** ×`damage_growth_bp` per level above 1.
+    - **Counter:** ×the counter rating, and ×`unrevealed_damage_bp` against an unrevealed cloaked alien.
+    - **Shield:** the hit is multiplied by the damage type's shield multiplier.
+      - If that's less than the shield, the shield takes it, at least 1 point, and the hit ends.
+      - Otherwise the shield breaks, and the excess goes back through the multiplier to the hull.
+    - **Hull:** piercing first removes its share of the armor. The reduction is armor ÷ (armor + 100), capped at 60%, and the hull takes at least 1 point. The 1-point floor applies once, to whichever part ends the hit.
+    - **Shield regen** waits 3 s after the alien last took damage, then adds 15 points a second, carrying remainders.
+  - **Kills** pay their kill credits at once.
+  - **Releases:** a Hive Carrier killed by a tower releases its Swarmers once every tower has acted, in order of death. They take the next ids and start where it fell, with its wave's scaling, and they move from the next tick.
+  - **Field towers:**
+    - Upgrade cost: build cost × `first_upgrade_cost_bp`, then ×`cost_growth_bp` for each later level.
+    - Range: +`range_step_bp` of the base range per level.
+    - Selling refunds `sell_refund_bp` of everything spent (D-015).
+    - Derived stats cap at 1,000,000,000.
+  - **Commands:** `place`, `upgrade` and `sell`, each naming a tile.
+    - The loaders refuse a malformed log: an unknown type, a tile that isn't a build tile, a tower not in the battle's set, ticks out of order, or a tick at or past `max_ticks`.
+    - The core skips a command that the state refuses and counts it, and the count is in the hash: not enough credits, a tile that's taken or empty, or the top level reached.
+  - **Not in this version:** status effects (the Ion Disruptor's slow, the Sensor Beacon's reveal and mark). A battle that would build one of those towers is refused at setup, so nothing runs on a half-built rule. They arrive in M2.
+- **Options:**
+  - pick targets by alien id;
+  - let a tower bank shots while idle;
+  - apply the 1-point floor to both the shield and the hull;
+  - leave command refusals out of the hash;
+  - run M2's abilities as no-ops;
+  - leave the Hive Carrier's release for M2.
+- **Reason:**
+  - "First" is the build prompt's default targeting rule: closest to the Core.
+  - A tower that banks shots would burst on whatever walks in after a quiet spell.
+  - One floor keeps "every hit deals at least 1 point" a single point.
+  - Hashing refusals lets a replay catch a tampered log.
+  - Refusing rules that aren't built yet is safer than running them half-built.
+  - The release is small and fully specified, and a golden battle already spawns a Hive Carrier.
+  - Each choice above is the plainest reading of the build prompt that integer math can state exactly.
 
 ## Open questions for the owner
 

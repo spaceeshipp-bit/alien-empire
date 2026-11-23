@@ -34,8 +34,10 @@ std::vector<int64_t> read_ints(std::istringstream &in, int64_t count) {
 }
 
 void print_result(const Battle &battle) {
-	static const char *names[] = { "running", "cleared", "timed_out" };
-	std::cout << "result " << names[battle.outcome] << " " << battle.tick << " " << battle.state_hash();
+	static const char *names[] = { "running", "cleared", "timed_out", "lost" };
+	std::cout << "result " << names[battle.outcome] << " " << battle.tick << " lives=" << battle.lives
+			  << " credits=" << battle.credits_x100 << " kills=" << battle.kills << " leaked=" << battle.leaked_count
+			  << " refused=" << battle.refused_commands << " spawned=" << battle.spawned_count << " " << battle.state_hash();
 	for (const auto &c : battle.checkpoints) {
 		std::cout << " " << c;
 	}
@@ -98,12 +100,45 @@ int main() {
 			in >> config.config_hash >> config.config_version;
 		} else if (cmd == "enemy") {
 			EnemyType e;
-			int64_t air;
-			in >> e.hp_x100 >> e.armor >> e.shield_x100 >> e.speed_mtps >> air >> e.leak_lives;
+			int64_t air, supported;
+			in >> e.hp_x100 >> e.armor >> e.shield_x100 >> e.speed_mtps >> air >> e.leak_lives >> e.class_index >>
+					e.kill_credits_x100 >> e.release_index >> e.release_count >> supported;
 			e.air = air != 0;
+			e.supported = supported != 0;
 			config.enemies.push_back(e);
+		} else if (cmd == "tower") {
+			TowerType t;
+			int64_t supported;
+			in >> t.cost_credits >> t.damage_x100 >> t.shots_per_s_x100 >> t.range_mt >> t.splash_mt >> t.shield_mult_bp >>
+					t.pierce_bp;
+			for (auto &rating : t.rating_bp) {
+				in >> rating;
+			}
+			in >> t.unrevealed_bp >> supported;
+			t.supported = supported != 0;
+			config.towers.push_back(t);
+		} else if (cmd == "upgrades") {
+			FieldUpgrades &u = config.upgrades;
+			in >> u.max_level >> u.first_upgrade_cost_bp >> u.cost_growth_bp >> u.damage_growth_bp >> u.range_step_bp >>
+					u.sell_refund_bp;
+		} else if (cmd == "damage") {
+			in >> config.damage.armor_constant >> config.damage.max_reduction_bp >> config.damage.min_damage_x100;
+		} else if (cmd == "timing") {
+			in >> config.regen_per_second_x100 >> config.regen_delay_ticks >> config.retarget_ticks;
 		} else if (cmd == "spec") {
-			in >> spec.battle_id >> spec.seed >> spec.max_ticks;
+			in >> spec.battle_id >> spec.seed >> spec.max_ticks >> spec.lives >> spec.credits;
+		} else if (cmd == "towerset") {
+			int64_t n;
+			in >> n;
+			spec.tower_set = read_ints(in, n);
+		} else if (cmd == "tile") {
+			BuildTile tile;
+			in >> tile.col >> tile.row;
+			spec.build_tiles.push_back(tile);
+		} else if (cmd == "command") {
+			Command c;
+			in >> c.tick >> c.kind >> c.tower_index >> c.col >> c.row;
+			spec.commands.push_back(c);
 		} else if (cmd == "lane") {
 			LaneSpec lane;
 			int64_t n;
@@ -122,7 +157,8 @@ int main() {
 			spec.lanes.push_back(lane);
 		} else if (cmd == "group") {
 			SpawnGroup g;
-			in >> g.enemy_index >> g.lane_index >> g.count >> g.first_tick >> g.interval_ticks >> g.jitter_ticks;
+			in >> g.enemy_index >> g.lane_index >> g.count >> g.first_tick >> g.interval_ticks >> g.jitter_ticks >> g.hp_bp >>
+					g.credits_bp;
 			spec.groups.push_back(g);
 		} else if (cmd == "battle_run") {
 			Battle battle;
@@ -135,6 +171,30 @@ int main() {
 				continue;
 			}
 			battle.run();
+			print_result(battle);
+		} else if (cmd == "battle_live") {
+			// The same battle with its commands queued live, each on the tick it
+			// applies, the way the phone sends them: it must match battle_run.
+			BattleSpec opening = spec;
+			opening.commands.clear();
+			Battle battle;
+			if (!battle.setup(config, opening)) {
+				std::cout << "error\n";
+				continue;
+			}
+			size_t next = 0;
+			bool refused = false;
+			while (battle.outcome == RUNNING) {
+				while (next < spec.commands.size() && spec.commands[next].tick == battle.tick) {
+					refused = refused || !battle.queue_command(spec.commands[next]).empty();
+					next += 1;
+				}
+				battle.advance();
+			}
+			if (refused) {
+				std::cout << "error queue_command refused a command setup accepted\n";
+				continue;
+			}
 			print_result(battle);
 		} else if (cmd == "battle_reuse") {
 			// One Battle set up three times: the valid battle run partway, a spec

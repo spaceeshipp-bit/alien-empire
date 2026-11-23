@@ -90,6 +90,9 @@ protected:
 
 public:
 	bool setup(const godot::Dictionary &config, const godot::Dictionary &spec);
+	// Queues a player command ({tick, kind, tower_index, col, row}) for this tick
+	// or later. Returns "" or why it was refused.
+	godot::String queue_command(const godot::Dictionary &command);
 	void advance();
 	godot::Dictionary run();
 	godot::Dictionary result() const;
@@ -101,10 +104,28 @@ public:
 	int64_t get_leaked_count() const { return battle.leaked_count; }
 	int64_t get_leaked_lives() const { return battle.leaked_lives; }
 	int64_t get_entity_updates() const { return battle.entity_updates; }
+	int64_t get_lives() const { return battle.lives; }
+	int64_t get_credits_x100() const { return battle.credits_x100; }
+	int64_t get_kills() const { return battle.kills; }
+	int64_t get_refused_commands() const { return battle.refused_commands; }
 	godot::PackedStringArray get_checkpoints() const;
 	godot::PackedStringArray get_errors() const;
 	// One Dictionary per live alien, in id order (tests and debugging).
 	godot::Array get_aliens() const;
+	// One Dictionary per tower, in id order, with its upgrade cost (-1 at the top
+	// level) and what selling it returns.
+	godot::Array get_towers() const;
+	// Live aliens for drawing, ALIEN_VIEW_STRIDE values each in id order: id,
+	// type_index, class_index, air, x, y, hp_x100, max_hp_x100, shield_x100,
+	// max_shield_x100.
+	godot::PackedInt64Array get_alien_view() const;
+	// The last tick's events, 5 values each: kind, a, b, x, y (core/battle.h).
+	godot::PackedInt64Array get_events() const;
+	// What upgrading a tower of this type from this level costs, x100.
+	int64_t upgrade_cost_x100(int64_t type_index, int64_t level) const;
+	// The commands so far, as {tick, kind, tower_index, col, row}: the log a
+	// replay needs.
+	godot::Array get_commands() const;
 
 private:
 	sim::Battle battle;

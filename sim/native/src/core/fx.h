@@ -13,7 +13,7 @@ namespace aetd::sim {
 
 // Raise whenever a change could alter any battle's result, and re-record the
 // golden hashes (sim/tests/golden/expected.json).
-inline constexpr int64_t SIM_VERSION = 1;
+inline constexpr int64_t SIM_VERSION = 2;
 inline constexpr int64_t TICK_RATE = 20;
 inline constexpr int64_t MS_PER_TICK = 50;
 

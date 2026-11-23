@@ -5,7 +5,7 @@
   "description": "Everything a battle needs besides the config: the seed, a snapshot of the map, the waves and the player's command log. Replaying the same spec on the same config and sim version gives the same result on any device.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["battle_id", "mode", "seed", "max_ms", "map", "waves", "commands"],
+  "required": ["battle_id", "mode", "seed", "max_ms", "lives", "credits", "towers", "map", "waves", "commands"],
   "properties": {
     "battle_id": {
       "type": "string",
@@ -27,6 +27,25 @@
       "minimum": 50,
       "description": "Hard stop. A PvE battle normally ends when every wave has spawned and no alien is left."
     },
+    "lives": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000,
+      "description": "Lives at the start. Leaks cost lives; the battle is lost at 0."
+    },
+    "credits": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000,
+      "description": "Battle credits at the start, for field towers. Kills earn more."
+    },
+    "towers": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 64,
+      "items": { "$ref": "common.schema.json#/$defs/id" },
+      "description": "Tower ids the player may build in this battle. Empty for a battle with no field towers."
+    },
     "map": { "$ref": "#/$defs/map" },
     "waves": {
       "type": "array",
@@ -35,7 +54,7 @@
     "commands": {
       "type": "array",
       "items": { "$ref": "#/$defs/command" },
-      "description": "Player inputs in tick order. M0 defines no command types yet, so the sim rejects any command; M1 adds field towers."
+      "description": "Player inputs in tick order, each applied at the start of its tick (D-034). A command the battle's state refuses (not enough credits, a taken or empty tile, the top level) is skipped and counted."
     }
   },
   "$defs": {
@@ -70,15 +89,31 @@
         }
       }
     },
+    "tile": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "integer", "minimum": 0, "maximum": 999 },
+        { "type": "integer", "minimum": 0, "maximum": 999 }
+      ],
+      "items": false,
+      "minItems": 2,
+      "description": "[column, row] of a map tile. Its center is at (column * 1000 + 500, row * 1000 + 500) mt."
+    },
     "map": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["lanes"],
+      "required": ["lanes", "build_tiles"],
       "properties": {
         "lanes": {
           "type": "array",
           "minItems": 1,
           "items": { "$ref": "#/$defs/lane" }
+        },
+        "build_tiles": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": { "$ref": "#/$defs/tile" },
+          "description": "Tiles a field tower may stand on, one tower per tile."
         }
       }
     },
@@ -107,11 +142,23 @@
     "wave": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["start_ms", "groups"],
+      "required": ["start_ms", "hp_bp", "credits_bp", "groups"],
       "properties": {
         "start_ms": {
           "$ref": "common.schema.json#/$defs/ms",
           "description": "Wave start, counted from the battle's start."
+        },
+        "hp_bp": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "description": "Scales the HP of this wave's aliens: 10000 keeps the config's HP. A stage grows it x1.09 per wave."
+        },
+        "credits_bp": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000,
+          "description": "Scales the kill credits of this wave's aliens. A stage grows it x1.03 per wave."
         },
         "groups": {
           "type": "array",
@@ -125,10 +172,42 @@
       "additionalProperties": false,
       "required": ["tick", "type", "args"],
       "properties": {
-        "tick": { "type": "integer", "minimum": 0 },
-        "type": { "$ref": "common.schema.json#/$defs/id" },
+        "tick": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The tick it applies at, before anything else in that tick. Below the battle's last tick."
+        },
+        "type": { "enum": ["place", "upgrade", "sell"] },
         "args": { "type": "object" }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "place" } } },
+          "then": {
+            "properties": {
+              "args": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["tower", "tile"],
+                "properties": {
+                  "tower": { "$ref": "common.schema.json#/$defs/id" },
+                  "tile": { "$ref": "#/$defs/tile" }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "args": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["tile"],
+                "properties": { "tile": { "$ref": "#/$defs/tile" } }
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

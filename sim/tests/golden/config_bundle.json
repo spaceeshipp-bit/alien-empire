@@ -1,5 +1,5 @@
 {
-  "config_hash": "38704caa93c96c8935791678cfc734ae0a09a350870b9419fd15bcb14fa00c85",
+  "config_hash": "e31fb616ac30478d56a550c90547ff9bc8582d73cedf224e274a9defa789bd7a",
   "data": {
     "counters": {
       "counters": {
@@ -139,6 +139,7 @@
           "class": "swarm",
           "hp_x100": 4000,
           "id": "swarmer",
+          "kill_credits_x100": 300,
           "leak_lives": 1,
           "movement": "ground",
           "shield_x100": 0,
@@ -150,6 +151,7 @@
           "class": "armored",
           "hp_x100": 36000,
           "id": "carapace_brute",
+          "kill_credits_x100": 2500,
           "leak_lives": 3,
           "movement": "ground",
           "shield_x100": 0,
@@ -161,6 +163,7 @@
           "class": "shielded",
           "hp_x100": 8000,
           "id": "shield_drone",
+          "kill_credits_x100": 800,
           "leak_lives": 1,
           "movement": "ground",
           "shield_x100": 24000,
@@ -172,6 +175,7 @@
           "class": "air",
           "hp_x100": 8000,
           "id": "skimmer",
+          "kill_credits_x100": 800,
           "leak_lives": 1,
           "movement": "air",
           "shield_x100": 0,
@@ -183,6 +187,7 @@
           "class": "cloaked",
           "hp_x100": 14000,
           "id": "phaser",
+          "kill_credits_x100": 1000,
           "leak_lives": 1,
           "movement": "ground",
           "shield_x100": 0,
@@ -200,6 +205,7 @@
           "class": "titan",
           "hp_x100": 250000,
           "id": "hive_carrier",
+          "kill_credits_x100": 6000,
           "leak_lives": 1,
           "movement": "ground",
           "shield_x100": 40000,
@@ -208,9 +214,9 @@
       ]
     },
     "manifest": {
-      "config_version": 1,
-      "label": "M0 baseline: combat tables from the build prompt of 2026-11-07",
-      "schema_version": 1
+      "config_version": 2,
+      "label": "M1: kill credits and tower retargeting added to the M0 baseline",
+      "schema_version": 2
     },
     "status_effects": {
       "mark": {
@@ -243,6 +249,7 @@
         "range_step_bp": 500,
         "sell_refund_bp": 7000
       },
+      "retarget_ms": 250,
       "towers": [
         {
           "abilities": [],

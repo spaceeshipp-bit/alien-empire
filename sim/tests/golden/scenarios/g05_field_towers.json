@@ -1,0 +1,67 @@
+{
+  "battle_id": "g05_field_towers",
+  "mode": "pve",
+  "seed": 5005,
+  "max_ms": 240000,
+  "lives": 30,
+  "credits": 1200,
+  "towers": ["plasma_torch", "pulse_turret", "railgun"],
+  "map": {
+    "lanes": [
+      {
+        "id": "west",
+        "ground": [[1500, 0], [1500, 5500], [3500, 5500], [3500, 11500], [4500, 11500], [4500, 13000]],
+        "air": [[4500, 0], [4500, 13000]]
+      },
+      {
+        "id": "east",
+        "ground": [[7500, 0], [7500, 7500], [5500, 7500], [5500, 11500], [4500, 11500], [4500, 13000]]
+      }
+    ],
+    "build_tiles": [[2, 3], [2, 6], [4, 2], [4, 5], [4, 8], [6, 5], [6, 8], [3, 12], [5, 12]]
+  },
+  "waves": [
+    {
+      "start_ms": 2000,
+      "hp_bp": 10000,
+      "credits_bp": 10000,
+      "groups": [
+        {"enemy": "swarmer", "lane": "west", "count": 10, "offset_ms": 0, "interval_ms": 400, "jitter_ms": 0}
+      ]
+    },
+    {
+      "start_ms": 20000,
+      "hp_bp": 10900,
+      "credits_bp": 10300,
+      "groups": [
+        {"enemy": "swarmer", "lane": "east", "count": 8, "offset_ms": 0, "interval_ms": 300, "jitter_ms": 200},
+        {"enemy": "skimmer", "lane": "west", "count": 3, "offset_ms": 1000, "interval_ms": 1500, "jitter_ms": 0}
+      ]
+    },
+    {
+      "start_ms": 40000,
+      "hp_bp": 11881,
+      "credits_bp": 10609,
+      "groups": [
+        {"enemy": "carapace_brute", "lane": "west", "count": 2, "offset_ms": 0, "interval_ms": 4000, "jitter_ms": 0},
+        {"enemy": "shield_drone", "lane": "east", "count": 3, "offset_ms": 2000, "interval_ms": 1000, "jitter_ms": 0},
+        {"enemy": "phaser", "lane": "east", "count": 2, "offset_ms": 5000, "interval_ms": 2000, "jitter_ms": 0},
+        {"enemy": "hive_carrier", "lane": "west", "count": 1, "offset_ms": 8000, "interval_ms": 0, "jitter_ms": 0}
+      ]
+    }
+  ],
+  "commands": [
+    {"tick": 0, "type": "place", "args": {"tower": "pulse_turret", "tile": [2, 3]}},
+    {"tick": 0, "type": "place", "args": {"tower": "plasma_torch", "tile": [4, 5]}},
+    {"tick": 0, "type": "place", "args": {"tower": "railgun", "tile": [4, 8]}},
+    {"tick": 300, "type": "place", "args": {"tower": "plasma_torch", "tile": [6, 8]}},
+    {"tick": 420, "type": "upgrade", "args": {"tile": [4, 8]}},
+    {"tick": 500, "type": "place", "args": {"tower": "pulse_turret", "tile": [4, 2]}},
+    {"tick": 640, "type": "upgrade", "args": {"tile": [4, 8]}},
+    {"tick": 700, "type": "sell", "args": {"tile": [2, 3]}},
+    {"tick": 701, "type": "place", "args": {"tower": "railgun", "tile": [2, 3]}},
+    {"tick": 800, "type": "place", "args": {"tower": "railgun", "tile": [3, 12]}},
+    {"tick": 900, "type": "upgrade", "args": {"tile": [4, 5]}},
+    {"tick": 1000, "type": "upgrade", "args": {"tile": [6, 5]}}
+  ]
+}
