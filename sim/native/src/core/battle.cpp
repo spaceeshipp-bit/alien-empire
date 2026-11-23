@@ -671,8 +671,10 @@ void Battle::apply(const Command &command, int64_t index) {
 
 // Brings the next wave (the earliest that hasn't started; ties to the lower
 // index) in now. Every wave that hasn't started moves earlier by the same
-// amount, with its spawns, so the later waves keep their spacing. The player is
-// paid call_credits_per_s for each second skipped, up to call_credits_max.
+// amount, with its spawns, so the later waves keep their spacing; waves that
+// shared its start come in with it, and the CALLED event names the lowest
+// index. The player is paid call_credits_per_s for each second skipped, up to
+// call_credits_max.
 void Battle::call_wave(int64_t index) {
 	int64_t next = -1;
 	for (size_t w = 0; w < wave_starts.size(); w++) {
@@ -709,7 +711,8 @@ void Battle::call_wave(int64_t index) {
 
 // A wave is done when every alien it planned has spawned and every one of
 // them (and any they released) has died or leaked. If none leaked, it pays the
-// clean-wave bonus. Waves finish in index order.
+// clean-wave bonus. A wave can finish before an earlier one; waves that finish
+// on the same tick do so in index order.
 void Battle::finish_waves() {
 	for (size_t w = 0; w < wave_pending.size(); w++) {
 		if (wave_done[w] != 0 || wave_pending[w] != 0) {

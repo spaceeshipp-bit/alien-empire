@@ -166,7 +166,7 @@ struct Alien {
 	int64_t move_accum = 0;
 	int64_t speed_mtps = 0;
 	int64_t hp_x100 = 0;
-	int64_t max_hp_x100 = 0;  // for health bars; not part of the state
+	int64_t max_hp_x100 = 0;  // from the type and hp_bp, both hashed; Strongest targeting reads it (D-036)
 	int64_t shield_x100 = 0;
 	int64_t max_shield_x100 = 0;
 	int64_t regen_accum = 0;

@@ -328,10 +328,10 @@ Every design or technical decision, with its date, the options considered and th
     - **First** is unchanged: the least distance left to the Core.
     - **Strongest** picks the toughest kind: the most full HP plus full shield, the wave's HP growth included. Ties go to the least distance left, then the lower id.
     - The Railgun uses Strongest; the other towers use First. M2 lets the player choose per tower, among the build prompt's four rules.
-  - **Calling a wave:** a `call_wave` command, with no tile. The earliest wave that hasn't started starts now, and every later wave moves sooner by the same number of ticks.
+  - **Calling a wave:** a `call_wave` command, with no tile. The earliest wave that hasn't started starts now, and every later wave moves sooner by the same number of ticks. Waves that share a start come together, and the event names the lowest.
     - It pays `call_credits_per_s` for each second skipped, at most `call_credits_max` (counted in ticks: skipped × per second × 100 ÷ 20, truncated).
     - With no wave left to call, it's refused and counted like any other refusal.
-  - **Clean waves:** a wave is done when everything it planned has spawned and every one of its aliens, released ones included, has died or leaked. Waves finish in index order, and a wave with no leak pays `clean_wave_credits`.
+  - **Clean waves:** a wave is done when everything it planned has spawned and every one of its aliens, released ones included, has died or leaked. A wave with no leak pays `clean_wave_credits`. A wave can finish before an earlier one, for example after a call; waves that finish on the same tick do so in index order.
   - **Spec and hash:**
     - The spec adds the three bonus fields; the stage sets them.
     - The hash adds each alien's wave and each wave's start, pending count, leak flag and done flag.

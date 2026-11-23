@@ -177,7 +177,7 @@ def resolve_tower(bundle: dict, tower: dict) -> Tower:
         damage["shield_multipliers_bp"].get(tower["damage_type"], 10000), tower["armor_pierce_bp"], ratings,
         row.get("cloaked", {}).get("unrevealed_damage_bp", 0),
         all(a["type"] in SUPPORTED_TOWER_ABILITIES for a in tower["abilities"]),
-        TARGETING[tower.get("targeting", "first")],
+        TARGETING[tower["targeting"]],  # required, as sim_config.gd requires it
     )
 
 
@@ -222,7 +222,9 @@ def case_from_spec(bundle: dict, spec: dict, name: str = "") -> Case:
     commands = []
     for c in spec["commands"]:
         kind = KINDS[c["type"]]
-        col, row = c["args"]["tile"] if kind != 4 else (0, 0)
+        if kind == KINDS["call_wave"] and c["args"]:
+            raise ValueError("call_wave takes no arguments")  # as battle_spec.gd refuses them
+        col, row = c["args"]["tile"] if kind != KINDS["call_wave"] else (0, 0)
         commands.append(Command(c["tick"], kind, tower_index[c["args"]["tower"]] if kind == 1 else -1, col, row))
     upgrades, rules = bundle_rules(bundle)
     return Case(

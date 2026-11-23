@@ -413,6 +413,7 @@ func test_calling_a_wave_pays_and_moves_every_later_wave() -> bool:
 	battle.advance()  # tick 20: wave 2 was 180 ticks (9 s) away
 	expect_eq(battle.credits_x100, 900, "1 credit a second skipped")
 	expect_eq(battle.wave_starts, PackedInt64Array([0, 20, 220]), "every wave not yet started moved 180 ticks sooner")
+	expect_eq(battle.spawned_count, 2, "and its aliens with it: wave 2's Swarmer spawned on the call's tick")
 	expect_eq(_events_of(battle, Battle.Event.CALLED), [[1, 900]], "the event names the wave and the bonus")
 	expect_eq(battle.command_log(), [{"tick": 20, "type": "call_wave", "args": {}}], "the log a replay needs")
 	return true
@@ -463,19 +464,19 @@ func test_first_shoots_the_leader_and_strongest_the_toughest() -> bool:
 		var battle: Battle = _railgun_duel(groups, targeting)
 		for i in 60:
 			battle.advance()
-		var brute_id: int = 2
 		var target: int = battle.towers[0].target_id
 		if targeting == "first":
-			expect_true(target != brute_id, "first: the Swarmer in front, not the Brute (target %d)" % target)
+			expect_eq(target, 1, "first: the Swarmer in front (id 1)")
 		else:
-			expect_eq(target, brute_id, "strongest: the Brute")
+			expect_eq(target, 2, "strongest: the Brute (id 2)")
 	return true
 
 
 func test_strongest_finishes_the_alien_it_started_on() -> bool:
 	# Two Swarmers a tick apart: a Railgun hit leaves the leader at 15 of 40 HP. Ranked by full
 	# HP the two tie, so the second shot goes to the leader again and kills it; ranked by HP
-	# left it would have gone to the fresh one.
+	# left it would have gone to the fresh one. (First would also kill it here: the test above
+	# is the one that tells Strongest from First.)
 	var battle: Battle = _railgun_duel([_group("swarmer", 2, 50)], "strongest")
 	for i in 60:
 		battle.advance()
