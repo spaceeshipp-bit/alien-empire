@@ -12,6 +12,7 @@ def test_every_string_key_exists():
     used = set()
     for path in list((CLIENT / "game").glob("*.gd")) + list((CLIENT / "scenes").glob("*.gd")):
         used |= set(re.findall(r'\b(?:S|Strings)\.t\("([a-z0-9_.]+)"', path.read_text(encoding="utf-8")))
+    used = {key for key in used if not key.endswith(".")}  # "tower." + id: test_tower_names_cover_the_config
     assert used, "no string keys found"
     assert sorted(used - set(table)) == []
 
