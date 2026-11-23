@@ -722,7 +722,9 @@ def _break_command(rnd: random.Random, case: Case) -> Case:
     cases = [
         ("tick at the end", Command(case.max_ticks, 2, -1, col, row)),
         ("negative tick", Command(-1, 2, -1, col, row)),
-        ("unknown kind", Command(0, rnd.choice((0, 4)), -1, col, row)),
+        ("unknown kind", Command(0, rnd.choice((0, max(KINDS.values()) + 1)), -1, col, row)),
+        ("call_wave names a tile", Command(0, KINDS["call_wave"], -1, col + 1, row)),
+        ("call_wave names a tower", Command(0, KINDS["call_wave"], 0, 0, 0)),
         ("not a build tile", Command(0, 2, -1, CORE_MAX_TILE, CORE_MAX_TILE)
          if (CORE_MAX_TILE, CORE_MAX_TILE) not in tiles else Command(0, 2, -1, -1, 0)),
         ("tower not in the set", Command(0, 1, len(case.towers), col, row)),
