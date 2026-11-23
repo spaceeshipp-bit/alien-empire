@@ -277,7 +277,7 @@ Every design or technical decision, with its date, the options considered and th
     - **Hull:** piercing first removes its share of the armor. The reduction is armor ÷ (armor + 100), capped at 60%, and the hull takes at least 1 point. The 1-point floor applies once, to whichever part ends the hit.
     - **Shield regen** waits 3 s after the alien last took damage, then adds 15 points a second, carrying remainders.
   - **Kills** pay their kill credits at once.
-  - **Releases:** a Hive Carrier killed by a tower releases its Swarmers once every tower has acted, in order of death. They take the next ids and start where it fell, with its wave's scaling, and they move from the next tick.
+  - **Releases:** a Hive Carrier killed by a tower releases its Swarmers once every tower has acted, in order of death. They take the next ids and start where it fell, with its wave's scaling, and they move from the next tick. Releases go one level deep: a released alien can't release others, and every alien a group could release counts toward the spawn limit, so deaths can't multiply aliens without end.
   - **Field towers:**
     - Upgrade cost: build cost × `first_upgrade_cost_bp`, then ×`cost_growth_bp` for each later level.
     - Range: +`range_step_bp` of the base range per level.
