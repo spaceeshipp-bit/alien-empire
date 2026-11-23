@@ -78,5 +78,8 @@ Follow the build prompt's order. Standing concerns to carry forward:
 | Update your build prompt's Sim core line | D-026 changed it; the proposed wording is in D-026 | Your build prompt doc |
 | Change any of M1's answers if you want: M1 uses the recommendations for now (D-033) | Optional, any time before the M1 playtest ends | `docs/milestones/M1.md` |
 | Share the concept boards, if you'd like the placeholders to follow them more closely | Optional; final art later (D-031) | `docs/ART.md` |
+| Play the M1 battle from the newest green CI run on the session branch, and run Performance test on your low-end phone | M1's playtest and its 60 fps check | `docs/milestones/M1.md` |
+| Approve or change the wording for "wave pressure is within target" | M1's done-when (D-035) | `docs/DECISIONS.md` D-035 |
+| Read the design review and say yes or no to the items marked as needing your approval: Railgun targets Strongest by default, send the next wave early for a bonus, the base-building direction and the mini-games | They change the build prompt | `docs/DESIGN_REVIEW.md` |
 | Say which phone is your low-end test phone (M1-D) | M1 must hold 60 fps on a low-end phone | `docs/milestones/M1.md` |
 | Q8, Gradle cache terms | Optional | `docs/DECISIONS.md` |
