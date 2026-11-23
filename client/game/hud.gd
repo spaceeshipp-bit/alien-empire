@@ -9,6 +9,8 @@ signal upgrade_pressed
 signal sell_pressed
 signal sheet_closed
 signal pause_pressed
+signal start_pressed
+signal speed_pressed
 signal resume_pressed
 signal restart_pressed
 signal quit_pressed
@@ -30,6 +32,10 @@ var _toast: Label
 var _toast_t: float = 0.0
 var _overlay: Control
 var _lives_flash: float = 0.0
+var _speed_button: Button
+var _next_row: HBoxContainer
+var _next_key: String = ""
+var _armed_card: String = ""
 var _last_lives: int = -1
 
 
@@ -127,8 +133,14 @@ func _build_top_bar() -> void:
 	_wave_label = _label("", 30, Palette.YOU)
 	_countdown_label = _label("", 20, Palette.MUTED)
 	wave_box.add_child(_wave_label)
-	wave_box.add_child(_countdown_label)
+	_next_row = HBoxContainer.new()
+	_next_row.add_theme_constant_override("separation", 4)
+	_next_row.add_child(_countdown_label)
+	wave_box.add_child(_next_row)
 	row.add_child(wave_box)
+	_speed_button = _button(S.t("hud.speed", [1]), func() -> void: speed_pressed.emit())
+	_speed_button.custom_minimum_size = Vector2(72, 64)
+	row.add_child(_speed_button)
 	row.add_child(_stat_icon("lives"))
 	_lives_label = _label("", 32)
 	row.add_child(_lives_label)
@@ -178,6 +190,45 @@ func _set_sheet(body: Control) -> void:
 	_sheet.add_child(body)
 
 
+## Before the first wave: a button to start it, with time to build first.
+func show_start() -> void:
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 8)
+	var hint := _label(S.t("build.start_hint"), 20, Palette.MUTED)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(hint)
+	box.add_child(_button(S.t("build.start"), func() -> void: start_pressed.emit(), Palette.HIVE))
+	_set_sheet(box)
+
+
+func set_speed(speed: int) -> void:
+	_speed_button.text = S.t("hud.speed", [speed])
+
+
+## The next wave's classes as icons; a warning in red when nothing built can hit one.
+func set_next_wave(classes: Array, uncovered: Array) -> void:
+	var key: String = str(classes) + str(uncovered)
+	if key == _next_key:
+		return
+	_next_key = key
+	for child in _next_row.get_children():
+		if child != _countdown_label:
+			child.queue_free()
+	for klass: String in classes:
+		var icon := TextureRect.new()
+		icon.texture = Art.icon(klass)
+		icon.custom_minimum_size = Vector2(24, 24)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_next_row.add_child(icon)
+	if not uncovered.is_empty():
+		var names: PackedStringArray = PackedStringArray()
+		for klass: String in uncovered:
+			names.append(S.t("class." + klass))
+		toast(S.t("hud.uncovered", [", ".join(names)]))
+
+
 func show_hint() -> void:
 	var box := VBoxContainer.new()
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -189,7 +240,8 @@ func show_hint() -> void:
 
 ## The build menu: a card per tower, dimmed when the credits can't cover it.
 ## towers: [{id, cost, classes (strong against)}].
-func show_build(towers: Array, credits: int) -> void:
+func show_build(towers: Array, credits: int, armed: String = "") -> void:
+	_armed_card = armed
 	var box := VBoxContainer.new()
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
@@ -225,6 +277,12 @@ func _tower_card(t: Dictionary, affordable: bool) -> Control:
 	card.add_theme_stylebox_override("disabled", disabled)
 	card.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	card.pressed.connect(func() -> void: build_pressed.emit(String(t.id)))
+	if String(t.id) == _armed_card:
+		normal.border_color = Palette.EYE
+		normal.border_width_left = 4
+		normal.border_width_right = 4
+		normal.border_width_top = 4
+		normal.border_width_bottom = 4
 	var column := VBoxContainer.new()
 	column.set_anchors_preset(Control.PRESET_FULL_RECT)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -248,7 +306,8 @@ func _tower_card(t: Dictionary, affordable: bool) -> Control:
 	var name_label := _label(S.t("tower." + String(t.id)), 19, Palette.TEXT if affordable else Palette.MUTED)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(name_label)
-	var cost := _label(S.t("build.cost", [t.cost]), 22, Palette.EYE if affordable else Color(Palette.MUTED, 0.6))
+	var cost_text: String = S.t("build.confirm") if String(t.id) == _armed_card else S.t("build.cost", [t.cost])
+	var cost := _label(cost_text, 22 if String(t.id) != _armed_card else 16, Palette.EYE if affordable else Color(Palette.MUTED, 0.6))
 	cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(cost)
 	var icons := HBoxContainer.new()

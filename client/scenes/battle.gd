@@ -22,7 +22,7 @@ const Stage := preload("res://sim/core/stage.gd")
 const STAGE_ID := "landfall_01"
 const BUNDLE := "res://data/config_bundle.json"
 const TICK := 1.0 / 20.0
-const MAX_TICKS_PER_FRAME := 4
+const MAX_TICKS_PER_FRAME := 8
 
 var _battle: RefCounted
 var _config: RefCounted
@@ -38,6 +38,10 @@ var _autoplay: bool = false
 var _fast: bool = false
 var _replay_out: String = ""
 var _quit_at_end: bool = false
+var _started: bool = false
+var _speed: int = 1
+## The tower whose card was tapped once: its range shows, and a second tap builds it.
+var _armed: String = ""
 
 
 func _ready() -> void:
@@ -60,6 +64,14 @@ func _ready() -> void:
 	_hud.upgrade_pressed.connect(_on_upgrade)
 	_hud.sell_pressed.connect(_on_sell)
 	_hud.sheet_closed.connect(_deselect)
+	_hud.start_pressed.connect(func() -> void:
+		_started = true
+		_deselect()
+	)
+	_hud.speed_pressed.connect(func() -> void:
+		_speed = 2 if _speed == 1 else 1
+		_hud.set_speed(_speed)
+	)
 	var problem: String = _start()
 	if not problem.is_empty():
 		_ended = true
@@ -101,6 +113,9 @@ func _start() -> String:
 	add_child(_map)
 	_map.setup(_battle, _config, _stage, tile)
 	_map.tile_tapped.connect(_on_tile)
+	_started = _autoplay
+	if not _started:
+		_hud.show_start()
 	_map.command_refused.connect(func() -> void: _hud.toast(S.t("build.cant_afford")))
 	_update_hud()
 	return ""
@@ -109,19 +124,24 @@ func _start() -> String:
 func _process(delta: float) -> void:
 	if _ended or _paused or _battle == null:
 		return
+	if not _started:
+		_update_hud()
+		return
 	if _fast:
 		while not _ended:
 			_step()
+		_update_hud()
 		return
+	var tick_time: float = TICK / _speed
 	_accumulator += delta
 	var steps: int = 0
-	while _accumulator >= TICK and steps < MAX_TICKS_PER_FRAME and not _ended:
-		_accumulator -= TICK
+	while _accumulator >= tick_time and steps < MAX_TICKS_PER_FRAME and not _ended:
+		_accumulator -= tick_time
 		steps += 1
 		_step()
 	if steps == MAX_TICKS_PER_FRAME:
 		_accumulator = 0.0  # a long stall: drop the backlog rather than race
-	_map.alpha = clampf(_accumulator / TICK, 0.0, 1.0)
+	_map.alpha = clampf(_accumulator / tick_time, 0.0, 1.0)
 	_update_hud()
 
 
@@ -146,6 +166,38 @@ func _update_hud() -> void:
 		elif next_seconds < 0:
 			next_seconds = int(ceil(float(start - tick) * TICK))
 	_hud.set_status(wave, starts.size(), next_seconds, _battle.lives, _battle.credits_x100 / 100)
+	if wave < starts.size():
+		_hud.set_next_wave(_wave_classes(wave), _uncovered(_wave_classes(wave)))
+	else:
+		_hud.set_next_wave([], [])
+
+
+## The classes in wave index (counted from 0), in order of first appearance.
+func _wave_classes(index: int) -> Array:
+	var classes: Array = []
+	for group: Dictionary in _spec_data["waves"][index]["groups"]:
+		var klass: String = _config.enemy(String(group["enemy"])).enemy_class
+		if not classes.has(klass):
+			classes.append(klass)
+	return classes
+
+
+## Which of these classes no tower on the map can hit (before anything is built, none).
+func _uncovered(classes: Array) -> Array:
+	var built: Array = _battle.towers
+	if built.is_empty():
+		return []
+	var out: Array = []
+	for klass: String in classes:
+		var c: int = _config.CLASSES.find(klass)
+		var covered: bool = false
+		for t: Dictionary in built:
+			var tower: RefCounted = _config.tower(_config.tower_ids()[int(t.type_index)])
+			if tower.rating_bp[c] > 0 and (klass != "cloaked" or tower.unrevealed_bp > 0):
+				covered = true
+		if not covered:
+			out.append(klass)
+	return out
 
 
 func _on_tile(tile: Vector2i) -> void:
@@ -155,6 +207,7 @@ func _on_tile(tile: Vector2i) -> void:
 		_deselect()
 		return
 	_map.selected = tile
+	_armed = ""
 	_show_sheet()
 
 
@@ -169,8 +222,8 @@ func _show_sheet() -> void:
 		var cards: Array = []
 		for id: String in _spec.tower_ids:
 			cards.append({"id": id, "cost": _config.tower(id).cost_credits, "classes": _shown_classes(id)})
-		_hud.show_build(cards, credits)
-		_map.preview_range = 0.0
+		_hud.show_build(cards, credits, _armed)
+		_map.preview_range = float(_config.tower(_armed).range_mt) * _map.k if not _armed.is_empty() else 0.0
 		return
 	var tower_type: String = _config.tower_ids()[int(tower.type_index)]
 	var upgrade: int = int(tower.upgrade_cost_x100)
@@ -192,10 +245,14 @@ func _shown_classes(tower_id: String) -> Array:
 
 
 func _deselect() -> void:
+	_armed = ""
 	if _map != null:
 		_map.selected = Vector2i(-1, -1)
 		_map.preview_range = 0.0
-	_hud.show_hint()
+	if _started or _ended:
+		_hud.show_hint()
+	else:
+		_hud.show_start()
 
 
 func _on_build(tower_id: String) -> void:
@@ -204,6 +261,11 @@ func _on_build(tower_id: String) -> void:
 		return
 	if _battle.credits_x100 < _config.tower(tower_id).cost_credits * 100:
 		_hud.toast(S.t("build.cant_afford"))
+		return
+	if _armed != tower_id:
+		# First tap: show where it would reach; a second tap builds.
+		_armed = tower_id
+		_show_sheet()
 		return
 	var problem: String = _battle.queue_command("place", tile, tower_id)
 	if not problem.is_empty():
@@ -281,7 +343,19 @@ func _finish() -> void:
 	var result: Dictionary = _battle.result()
 	# Only clearing every wave wins; running out of time with aliens left is a loss.
 	var won: bool = _battle.outcome == 1
-	_hud.show_end(won, S.t("end.stats", [result["kills"], result["lives"], int(result["credits_x100"]) / 100]))
+	# Stars for lives kept (build prompt, Story campaign): all three for 90% or
+	# more, two for half or more, one for clearing.
+	var kept: float = float(_battle.lives) / float(_spec_data["lives"])
+	var stars: int = 0 if not won else (3 if kept >= 0.9 else (2 if kept >= 0.5 else 1))
+	var lines: PackedStringArray = PackedStringArray([S.t("end.stars", [stars]),
+			S.t("end.stats", [result["kills"], result["lives"], int(result["credits_x100"]) / 100])])
+	var best_id: int = -1
+	for id: int in _map.kills_by_tower:
+		if best_id < 0 or int(_map.kills_by_tower[id]) > int(_map.kills_by_tower[best_id]):
+			best_id = id
+	if best_id >= 0 and _map.built.has(best_id):
+		lines.append(S.t("end.best", [S.t("tower." + String(_map.built[best_id][0])), _map.kills_by_tower[best_id]]))
+	_hud.show_end(won, "\n".join(lines))
 	print("Battle %s: %s at tick %d, lives %d, kills %d, credits %d, hash %s" % [
 		_stage["id"], result["outcome"], result["ticks"], result["lives"], result["kills"],
 		int(result["credits_x100"]) / 100, result["final_hash"]])

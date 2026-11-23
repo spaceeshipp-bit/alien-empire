@@ -53,12 +53,17 @@ var _prev: Dictionary = {}  # alien id -> Vector2, before the last tick
 var _cur: Dictionary = {}  # alien id -> Vector2, after it
 var _towers: Dictionary = {}  # tower id -> TowerView
 var _tower_state: Dictionary = {}  # tower id -> the tower's Dictionary from the sim
+var _sold: Dictionary = {}  # tower ids sold, so the end screen can still name them
+## Every tower ever built: id -> [type id, tile], for the end screen.
+var built: Dictionary = {}
 var _enemy_ids: PackedStringArray = PackedStringArray()
 var _tower_ids: PackedStringArray = PackedStringArray()
 var _build_tiles: Dictionary = {}  # Vector2i -> true
 var _time: float = 0.0
 var _core_hit: float = 0.0
 var _origin: Vector2 = Vector2.ZERO
+## Kills by tower id, for the end screen.
+var kills_by_tower: Dictionary = {}
 
 
 func setup(battle: RefCounted, config: SimConfig, stage: Dictionary, tile_size: float) -> void:
@@ -173,6 +178,7 @@ func _sync_towers() -> void:
 			tower.setup(int(t.id), _tower_ids[int(t.type_index)], tile_px)
 			tower.position = (Vector2(float(t.col), float(t.row)) + Vector2(0.5, 0.5)) * tile_px
 			_towers[int(t.id)] = tower
+			built[int(t.id)] = [_tower_ids[int(t.type_index)], Vector2i(int(t.col), int(t.row))]
 		tower.set_level(int(t.level))
 	for id: int in _towers.keys():
 		if not now.has(id):
@@ -203,12 +209,15 @@ func _play_events(credits_before: int) -> void:
 			SHOT:
 				_shot(int(events[i + 1]), int(events[i + 2]), at)
 			KILL:
+				var killer: int = int(events[i + 2])
+				kills_by_tower[killer] = int(kills_by_tower.get(killer, 0)) + 1
 				var alien: AlienView = _aliens.get(int(events[i + 1]))
 				var color: Color = alien.color if alien != null else Palette.TEXT
 				_fx.burst(at, color, 12, tile_px * 2.2, tile_px * 0.09, 0.45)
 				_fx.ring(at, tile_px * 0.1, tile_px * 0.5, color, 3.0, 0.3)
 				kills.append(at)
 			LEAK:
+				Input.vibrate_handheld(60)
 				_core_hit = 1.0
 				_fx.shake = 1.0
 				_fx.ring(_core.position, tile_px * 0.4, tile_px * 1.6, Palette.DANGER, 5.0, 0.5)
@@ -225,6 +234,7 @@ func _play_events(credits_before: int) -> void:
 			SOLD:
 				commands = true
 				_fx.burst(at, Palette.YOU, 18, tile_px * 2.4, tile_px * 0.07, 0.5)
+				_sold[int(events[i + 1])] = true
 	# Kill credits float up from the kills: what the credits gained this tick,
 	# shared between them. In the rare tick that also ran a command, the gain
 	# mixes in its cost, so the numbers are skipped rather than guessed.
