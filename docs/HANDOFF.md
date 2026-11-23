@@ -7,6 +7,13 @@ Updated 2026-11-23. Read this first, then `docs/ENGINEERING.md` (the standing ru
 - **M0 is built and green in CI** on `m0-foundations`. `docs/milestones/M0.md` names the green `m0-foundations` run for this code.
 - **M0 is not done.** It's done when the owner's phone shows **Sim tests: ALL CHECKS PASS** and every Plugin Lab check passes (`docs/PLUGINS.md`). Nothing merges into `main` before that. Don't put M1 code on `m0-foundations`.
 - **M1 has started, on the builder's session branch** (D-033). The owner asked to be told when the game is ready to test, so M1 uses the recommended answers in `docs/milestones/M1.md`. The session branch no longer matches `m0-foundations`. A fix for M0 goes on the session branch as its own commit and is cherry-picked onto `m0-foundations`; M1 commits are never cherry-picked there.
+- **M1's battle runs on sim version 3** (D-036). The owner approved every design-review recommendation (D-038):
+  - the Railgun targets the toughest alien;
+  - the next wave can be called early for a bonus;
+  - a wave with no leak pays a bonus;
+  - Landfall 01 is rebuilt with 13 pads and hairpins, and tuned so the reference builder clears with 14 of 20 lives (D-037).
+
+  The battle screen has the matching buttons. Every result is checked three ways: the core, the Python model, and the GDScript loaders with the library. The next step is the owner's playtest.
 - **Placeholder art is in** (D-031, D-032). Sprites drawn in code by `tools/art/sprites.py` are written to `client/art/`, with class colors checked for color-blind players. Final art comes later, when the owner says. The rules are in `docs/ART.md`.
 - **The sim is C++ in a GDExtension** (D-026). GDScript parses and checks inputs and wraps the core. The build prompt's "pure GDScript" line waits on the owner's doc (see Owner actions).
 - **What the phone checks now:**
