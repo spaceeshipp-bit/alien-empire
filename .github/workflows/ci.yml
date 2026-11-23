@@ -27,6 +27,8 @@ jobs:
         run: python3 tools/gen_vectors.py --check
       - name: Check the generated battles are current
         run: python3 tools/gen_battles.py --check
+      - name: Wave pressure and the stage playthroughs (D-035)
+        run: python3 tools/wave_pressure.py --check
       - name: Tool tests
         run: python3 -m pytest -q tools/tests
 

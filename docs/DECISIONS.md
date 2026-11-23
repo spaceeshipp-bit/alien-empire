@@ -303,6 +303,24 @@ Every design or technical decision, with its date, the options considered and th
   - The release is small and fully specified, and a golden battle already spawns a Hive Carrier.
   - Each choice above is the plainest reading of the build prompt that integer math can state exactly.
 
+### D-035 · 2026-11-23 · M1's economy, waves, and how wave pressure is judged
+
+- **Decision:** `landfall_01` takes the numbers from the design review (`docs/DESIGN_REVIEW.md`, section 2), each checked in the reference model:
+  - 300 starting credits;
+  - kill credits of 4 per Swarmer, 10 per Skimmer and 30 per Carapace Brute;
+  - ten waves as long streams, 36 s apart from 10 s, with Brutes closing a wave;
+  - a reference layout in a fixed buying order.
+
+  `tools/wave_pressure.py --check`, in CI, requires:
+  - the build prompt's 0.4 to 0.6 on waves 1 to 3;
+  - the reference builder (the battle screen's `--autoplay`) to clear with 10 to 16 of 20 lives;
+  - a builder with only Pulse Turrets to lose.
+
+  It reports the last wave's ratio but doesn't gate it.
+- **Options:** keep the first guesses (they lose by wave 3); enlarge the last wave until the paper ratio reaches 0.8.
+- **Reason:** the paper reading of wave pressure is kinder than the sim. It counts every covered tile as a kill zone, spends every credit perfectly and ignores splash. A last wave enlarged to a paper 0.8 wipes the reference builder; about 0.6 is the most a paid-for layout survives. Today the last wave reads 0.59. The bot gates test what the target is for: a stage that a sensible build clears with lives to spare, where counters matter. The playthrough here cleared at 396 s with 10 of 20 lives, 288 kills and 6 leaks; Pulse-only lost at 388 s.
+- **Owner question:** M1's done-when says wave pressure is within target. The proposed wording: "0.4 to 0.6 on early waves by the formula; the last wave as hard as a sensible build survives, shown by the reference builder clearing with 10 to 16 of 20 lives while a one-tower build loses." The design review also proposes measuring pressure in the sim instead of on paper.
+
 ## Open questions for the owner
 
 | # | Question | Current default | Needed by |

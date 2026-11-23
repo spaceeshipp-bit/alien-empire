@@ -197,7 +197,7 @@
      ]
     ],
     "lives": 20,
-    "credits": 250,
+    "credits": 300,
     "towers": [
      "pulse_turret",
      "plasma_torch",
@@ -208,199 +208,220 @@
     "max_ms": 600000,
     "waves": [
      {
-      "start_ms": 8000,
+      "start_ms": 10000,
       "groups": [
        {
         "enemy": "swarmer",
         "lane": "west",
-        "count": 6,
+        "count": 18,
         "offset_ms": 0,
-        "interval_ms": 800
-       }
-      ]
-     },
-     {
-      "start_ms": 38000,
-      "groups": [
-       {
-        "enemy": "swarmer",
-        "lane": "east",
-        "count": 8,
-        "offset_ms": 0,
-        "interval_ms": 700
-       }
-      ]
-     },
-     {
-      "start_ms": 68000,
-      "groups": [
-       {
-        "enemy": "swarmer",
-        "lane": "west",
-        "count": 6,
-        "offset_ms": 0,
-        "interval_ms": 600
-       },
-       {
-        "enemy": "swarmer",
-        "lane": "east",
-        "count": 6,
-        "offset_ms": 2000,
-        "interval_ms": 600
-       }
-      ]
-     },
-     {
-      "start_ms": 98000,
-      "groups": [
-       {
-        "enemy": "skimmer",
-        "lane": "west",
-        "count": 3,
-        "offset_ms": 0,
-        "interval_ms": 1500
-       },
-       {
-        "enemy": "swarmer",
-        "lane": "east",
-        "count": 8,
-        "offset_ms": 3000,
-        "interval_ms": 500
-       }
-      ]
-     },
-     {
-      "start_ms": 128000,
-      "groups": [
-       {
-        "enemy": "carapace_brute",
-        "lane": "west",
-        "count": 1,
-        "offset_ms": 0,
-        "interval_ms": 0
-       },
-       {
-        "enemy": "swarmer",
-        "lane": "east",
-        "count": 10,
-        "offset_ms": 2000,
-        "interval_ms": 450
-       }
-      ]
-     },
-     {
-      "start_ms": 158000,
-      "groups": [
-       {
-        "enemy": "swarmer",
-        "lane": "west",
-        "count": 12,
-        "offset_ms": 0,
-        "interval_ms": 400
-       },
-       {
-        "enemy": "skimmer",
-        "lane": "east",
-        "count": 4,
-        "offset_ms": 4000,
         "interval_ms": 1200
        }
       ]
      },
      {
-      "start_ms": 188000,
+      "start_ms": 46000,
       "groups": [
        {
-        "enemy": "carapace_brute",
+        "enemy": "swarmer",
         "lane": "east",
-        "count": 2,
+        "count": 22,
         "offset_ms": 0,
-        "interval_ms": 4000
-       },
+        "interval_ms": 1000
+       }
+      ]
+     },
+     {
+      "start_ms": 82000,
+      "groups": [
        {
         "enemy": "swarmer",
         "lane": "west",
         "count": 14,
-        "offset_ms": 2000,
-        "interval_ms": 350
-       }
-      ]
-     },
-     {
-      "start_ms": 218000,
-      "groups": [
-       {
-        "enemy": "swarmer",
-        "lane": "west",
-        "count": 16,
         "offset_ms": 0,
-        "interval_ms": 300
+        "interval_ms": 1600
        },
        {
         "enemy": "swarmer",
         "lane": "east",
-        "count": 16,
-        "offset_ms": 1500,
-        "interval_ms": 300
+        "count": 14,
+        "offset_ms": 800,
+        "interval_ms": 1600
        }
       ]
      },
      {
-      "start_ms": 250000,
+      "start_ms": 118000,
       "groups": [
-       {
-        "enemy": "carapace_brute",
-        "lane": "west",
-        "count": 2,
-        "offset_ms": 0,
-        "interval_ms": 3500
-       },
        {
         "enemy": "skimmer",
-        "lane": "east",
-        "count": 6,
-        "offset_ms": 2000,
-        "interval_ms": 900
+        "lane": "west",
+        "count": 5,
+        "offset_ms": 0,
+        "interval_ms": 4000
        },
        {
         "enemy": "swarmer",
         "lane": "east",
         "count": 14,
         "offset_ms": 6000,
-        "interval_ms": 300
+        "interval_ms": 1200
        }
       ]
      },
      {
-      "start_ms": 284000,
+      "start_ms": 154000,
       "groups": [
        {
-        "enemy": "carapace_brute",
-        "lane": "west",
-        "count": 3,
+        "enemy": "swarmer",
+        "lane": "east",
+        "count": 20,
         "offset_ms": 0,
-        "interval_ms": 3000
+        "interval_ms": 1000
        },
        {
         "enemy": "carapace_brute",
+        "lane": "west",
+        "count": 1,
+        "offset_ms": 18000,
+        "interval_ms": 0
+       }
+      ]
+     },
+     {
+      "start_ms": 190000,
+      "groups": [
+       {
+        "enemy": "swarmer",
+        "lane": "west",
+        "count": 20,
+        "offset_ms": 0,
+        "interval_ms": 500
+       },
+       {
+        "enemy": "swarmer",
         "lane": "east",
-        "count": 3,
-        "offset_ms": 1500,
+        "count": 20,
+        "offset_ms": 11000,
+        "interval_ms": 500
+       }
+      ]
+     },
+     {
+      "start_ms": 226000,
+      "groups": [
+       {
+        "enemy": "skimmer",
+        "lane": "west",
+        "count": 6,
+        "offset_ms": 0,
         "interval_ms": 3000
        },
        {
         "enemy": "swarmer",
         "lane": "west",
-        "count": 24,
-        "offset_ms": 4000,
-        "interval_ms": 250
+        "count": 16,
+        "offset_ms": 2000,
+        "interval_ms": 1200
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "east",
+        "count": 2,
+        "offset_ms": 12000,
+        "interval_ms": 10000
+       }
+      ]
+     },
+     {
+      "start_ms": 262000,
+      "groups": [
+       {
+        "enemy": "swarmer",
+        "lane": "west",
+        "count": 16,
+        "offset_ms": 0,
+        "interval_ms": 1000
+       },
+       {
+        "enemy": "swarmer",
+        "lane": "east",
+        "count": 16,
+        "offset_ms": 9000,
+        "interval_ms": 1000
        },
        {
         "enemy": "skimmer",
         "lane": "east",
-        "count": 8,
+        "count": 3,
+        "offset_ms": 4000,
+        "interval_ms": 5000
+       }
+      ]
+     },
+     {
+      "start_ms": 298000,
+      "groups": [
+       {
+        "enemy": "swarmer",
+        "lane": "east",
+        "count": 18,
+        "offset_ms": 0,
+        "interval_ms": 1000
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "west",
+        "count": 1,
         "offset_ms": 8000,
-        "interval_ms": 700
+        "interval_ms": 0
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "east",
+        "count": 1,
+        "offset_ms": 16000,
+        "interval_ms": 0
+       }
+      ]
+     },
+     {
+      "start_ms": 334000,
+      "groups": [
+       {
+        "enemy": "swarmer",
+        "lane": "west",
+        "count": 30,
+        "offset_ms": 0,
+        "interval_ms": 1100
+       },
+       {
+        "enemy": "swarmer",
+        "lane": "east",
+        "count": 30,
+        "offset_ms": 550,
+        "interval_ms": 1100
+       },
+       {
+        "enemy": "skimmer",
+        "lane": "east",
+        "count": 5,
+        "offset_ms": 3000,
+        "interval_ms": 6000
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "west",
+        "count": 1,
+        "offset_ms": 20000,
+        "interval_ms": 0
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "east",
+        "count": 1,
+        "offset_ms": 28000,
+        "interval_ms": 0
        }
       ]
      }
@@ -411,6 +432,34 @@
       "tile": [
        4,
        4
+      ]
+     },
+     {
+      "tower": "pulse_turret",
+      "tile": [
+       4,
+       7
+      ]
+     },
+     {
+      "tower": "pulse_turret",
+      "tile": [
+       4,
+       10
+      ]
+     },
+     {
+      "tower": "pulse_turret",
+      "tile": [
+       3,
+       13
+      ]
+     },
+     {
+      "tower": "railgun",
+      "tile": [
+       2,
+       8
       ]
      },
      {
@@ -430,50 +479,36 @@
      {
       "tower": "railgun",
       "tile": [
-       4,
-       7
-      ]
-     },
-     {
-      "tower": "pulse_turret",
-      "tile": [
-       4,
-       10
-      ]
-     },
-     {
-      "tower": "plasma_torch",
-      "tile": [
-       2,
+       6,
        9
       ]
      },
      {
       "tower": "plasma_torch",
       "tile": [
-       6,
-       10
-      ]
-     },
-     {
-      "tower": "railgun",
-      "tile": [
        2,
        11
       ]
      },
      {
+      "tower": "plasma_torch",
+      "tile": [
+       6,
+       12
+      ]
+     },
+     {
       "tower": "pulse_turret",
       "tile": [
-       3,
+       5,
        13
       ]
      },
      {
-      "tower": "railgun",
+      "tower": "pulse_turret",
       "tile": [
-       6,
-       12
+       4,
+       1
       ]
      }
     ]
@@ -485,7 +520,7 @@
     "seed": 20261123,
     "max_ms": 600000,
     "lives": 20,
-    "credits": 250,
+    "credits": 300,
     "towers": [
      "pulse_turret",
      "plasma_torch",
@@ -681,152 +716,160 @@
     },
     "waves": [
      {
-      "start_ms": 8000,
+      "start_ms": 10000,
       "hp_bp": 10000,
       "credits_bp": 10000,
       "groups": [
        {
         "enemy": "swarmer",
         "lane": "west",
-        "count": 6,
+        "count": 18,
         "offset_ms": 0,
-        "interval_ms": 800,
-        "jitter_ms": 0
-       }
-      ]
-     },
-     {
-      "start_ms": 38000,
-      "hp_bp": 10900,
-      "credits_bp": 10300,
-      "groups": [
-       {
-        "enemy": "swarmer",
-        "lane": "east",
-        "count": 8,
-        "offset_ms": 0,
-        "interval_ms": 700,
-        "jitter_ms": 0
-       }
-      ]
-     },
-     {
-      "start_ms": 68000,
-      "hp_bp": 11881,
-      "credits_bp": 10609,
-      "groups": [
-       {
-        "enemy": "swarmer",
-        "lane": "west",
-        "count": 6,
-        "offset_ms": 0,
-        "interval_ms": 600,
-        "jitter_ms": 0
-       },
-       {
-        "enemy": "swarmer",
-        "lane": "east",
-        "count": 6,
-        "offset_ms": 2000,
-        "interval_ms": 600,
-        "jitter_ms": 0
-       }
-      ]
-     },
-     {
-      "start_ms": 98000,
-      "hp_bp": 12950,
-      "credits_bp": 10927,
-      "groups": [
-       {
-        "enemy": "skimmer",
-        "lane": "west",
-        "count": 3,
-        "offset_ms": 0,
-        "interval_ms": 1500,
-        "jitter_ms": 0
-       },
-       {
-        "enemy": "swarmer",
-        "lane": "east",
-        "count": 8,
-        "offset_ms": 3000,
-        "interval_ms": 500,
-        "jitter_ms": 0
-       }
-      ]
-     },
-     {
-      "start_ms": 128000,
-      "hp_bp": 14115,
-      "credits_bp": 11254,
-      "groups": [
-       {
-        "enemy": "carapace_brute",
-        "lane": "west",
-        "count": 1,
-        "offset_ms": 0,
-        "interval_ms": 0,
-        "jitter_ms": 0
-       },
-       {
-        "enemy": "swarmer",
-        "lane": "east",
-        "count": 10,
-        "offset_ms": 2000,
-        "interval_ms": 450,
-        "jitter_ms": 0
-       }
-      ]
-     },
-     {
-      "start_ms": 158000,
-      "hp_bp": 15385,
-      "credits_bp": 11591,
-      "groups": [
-       {
-        "enemy": "swarmer",
-        "lane": "west",
-        "count": 12,
-        "offset_ms": 0,
-        "interval_ms": 400,
-        "jitter_ms": 0
-       },
-       {
-        "enemy": "skimmer",
-        "lane": "east",
-        "count": 4,
-        "offset_ms": 4000,
         "interval_ms": 1200,
         "jitter_ms": 0
        }
       ]
      },
      {
-      "start_ms": 188000,
-      "hp_bp": 16769,
-      "credits_bp": 11938,
+      "start_ms": 46000,
+      "hp_bp": 10900,
+      "credits_bp": 10300,
       "groups": [
        {
-        "enemy": "carapace_brute",
+        "enemy": "swarmer",
         "lane": "east",
-        "count": 2,
+        "count": 22,
+        "offset_ms": 0,
+        "interval_ms": 1000,
+        "jitter_ms": 0
+       }
+      ]
+     },
+     {
+      "start_ms": 82000,
+      "hp_bp": 11881,
+      "credits_bp": 10609,
+      "groups": [
+       {
+        "enemy": "swarmer",
+        "lane": "west",
+        "count": 14,
+        "offset_ms": 0,
+        "interval_ms": 1600,
+        "jitter_ms": 0
+       },
+       {
+        "enemy": "swarmer",
+        "lane": "east",
+        "count": 14,
+        "offset_ms": 800,
+        "interval_ms": 1600,
+        "jitter_ms": 0
+       }
+      ]
+     },
+     {
+      "start_ms": 118000,
+      "hp_bp": 12950,
+      "credits_bp": 10927,
+      "groups": [
+       {
+        "enemy": "skimmer",
+        "lane": "west",
+        "count": 5,
         "offset_ms": 0,
         "interval_ms": 4000,
         "jitter_ms": 0
        },
        {
         "enemy": "swarmer",
-        "lane": "west",
+        "lane": "east",
         "count": 14,
-        "offset_ms": 2000,
-        "interval_ms": 350,
+        "offset_ms": 6000,
+        "interval_ms": 1200,
         "jitter_ms": 0
        }
       ]
      },
      {
-      "start_ms": 218000,
+      "start_ms": 154000,
+      "hp_bp": 14115,
+      "credits_bp": 11254,
+      "groups": [
+       {
+        "enemy": "swarmer",
+        "lane": "east",
+        "count": 20,
+        "offset_ms": 0,
+        "interval_ms": 1000,
+        "jitter_ms": 0
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "west",
+        "count": 1,
+        "offset_ms": 18000,
+        "interval_ms": 0,
+        "jitter_ms": 0
+       }
+      ]
+     },
+     {
+      "start_ms": 190000,
+      "hp_bp": 15385,
+      "credits_bp": 11591,
+      "groups": [
+       {
+        "enemy": "swarmer",
+        "lane": "west",
+        "count": 20,
+        "offset_ms": 0,
+        "interval_ms": 500,
+        "jitter_ms": 0
+       },
+       {
+        "enemy": "swarmer",
+        "lane": "east",
+        "count": 20,
+        "offset_ms": 11000,
+        "interval_ms": 500,
+        "jitter_ms": 0
+       }
+      ]
+     },
+     {
+      "start_ms": 226000,
+      "hp_bp": 16769,
+      "credits_bp": 11938,
+      "groups": [
+       {
+        "enemy": "skimmer",
+        "lane": "west",
+        "count": 6,
+        "offset_ms": 0,
+        "interval_ms": 3000,
+        "jitter_ms": 0
+       },
+       {
+        "enemy": "swarmer",
+        "lane": "west",
+        "count": 16,
+        "offset_ms": 2000,
+        "interval_ms": 1200,
+        "jitter_ms": 0
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "east",
+        "count": 2,
+        "offset_ms": 12000,
+        "interval_ms": 10000,
+        "jitter_ms": 0
+       }
+      ]
+     },
+     {
+      "start_ms": 262000,
       "hp_bp": 18278,
       "credits_bp": 12296,
       "groups": [
@@ -835,85 +878,101 @@
         "lane": "west",
         "count": 16,
         "offset_ms": 0,
-        "interval_ms": 300,
+        "interval_ms": 1000,
         "jitter_ms": 0
        },
        {
         "enemy": "swarmer",
         "lane": "east",
         "count": 16,
-        "offset_ms": 1500,
-        "interval_ms": 300,
+        "offset_ms": 9000,
+        "interval_ms": 1000,
+        "jitter_ms": 0
+       },
+       {
+        "enemy": "skimmer",
+        "lane": "east",
+        "count": 3,
+        "offset_ms": 4000,
+        "interval_ms": 5000,
         "jitter_ms": 0
        }
       ]
      },
      {
-      "start_ms": 250000,
+      "start_ms": 298000,
       "hp_bp": 19923,
       "credits_bp": 12664,
       "groups": [
        {
-        "enemy": "carapace_brute",
-        "lane": "west",
-        "count": 2,
-        "offset_ms": 0,
-        "interval_ms": 3500,
-        "jitter_ms": 0
-       },
-       {
-        "enemy": "skimmer",
-        "lane": "east",
-        "count": 6,
-        "offset_ms": 2000,
-        "interval_ms": 900,
-        "jitter_ms": 0
-       },
-       {
         "enemy": "swarmer",
         "lane": "east",
-        "count": 14,
-        "offset_ms": 6000,
-        "interval_ms": 300,
+        "count": 18,
+        "offset_ms": 0,
+        "interval_ms": 1000,
+        "jitter_ms": 0
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "west",
+        "count": 1,
+        "offset_ms": 8000,
+        "interval_ms": 0,
+        "jitter_ms": 0
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "east",
+        "count": 1,
+        "offset_ms": 16000,
+        "interval_ms": 0,
         "jitter_ms": 0
        }
       ]
      },
      {
-      "start_ms": 284000,
+      "start_ms": 334000,
       "hp_bp": 21716,
       "credits_bp": 13043,
       "groups": [
        {
-        "enemy": "carapace_brute",
+        "enemy": "swarmer",
         "lane": "west",
-        "count": 3,
+        "count": 30,
         "offset_ms": 0,
-        "interval_ms": 3000,
-        "jitter_ms": 0
-       },
-       {
-        "enemy": "carapace_brute",
-        "lane": "east",
-        "count": 3,
-        "offset_ms": 1500,
-        "interval_ms": 3000,
+        "interval_ms": 1100,
         "jitter_ms": 0
        },
        {
         "enemy": "swarmer",
-        "lane": "west",
-        "count": 24,
-        "offset_ms": 4000,
-        "interval_ms": 250,
+        "lane": "east",
+        "count": 30,
+        "offset_ms": 550,
+        "interval_ms": 1100,
         "jitter_ms": 0
        },
        {
         "enemy": "skimmer",
         "lane": "east",
-        "count": 8,
-        "offset_ms": 8000,
-        "interval_ms": 700,
+        "count": 5,
+        "offset_ms": 3000,
+        "interval_ms": 6000,
+        "jitter_ms": 0
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "west",
+        "count": 1,
+        "offset_ms": 20000,
+        "interval_ms": 0,
+        "jitter_ms": 0
+       },
+       {
+        "enemy": "carapace_brute",
+        "lane": "east",
+        "count": 1,
+        "offset_ms": 28000,
+        "interval_ms": 0,
         "jitter_ms": 0
        }
       ]

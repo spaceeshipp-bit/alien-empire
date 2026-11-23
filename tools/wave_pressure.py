@@ -41,6 +41,10 @@ from reference import sim_model
 EARLY_WAVES = 3
 EARLY_TARGET = (0.4, 0.6)
 LAST_TARGET = (0.8, 1.0)
+# The gates --check enforces (D-035): the reference builder clears with this
+# many lives left, and a builder with only Pulse Turrets loses, so counters matter.
+REFERENCE_LIVES = (10, 16)
+ONLY_TOWER = "pulse_turret"
 
 
 @dataclasses.dataclass
@@ -148,17 +152,19 @@ def pressure(data: dict, stage: dict, credits: int | None = None, kill_scale: fl
     return reports
 
 
-def playthrough(data: dict, stage: dict, seed: int = 1) -> tuple[sim_model.Result, list[dict]]:
+def playthrough(data: dict, stage: dict, seed: int = 1, only: str = "") -> tuple[sim_model.Result, list[dict]]:
     """The stage played by the battle screen's --autoplay builder, through the
-    reference model. Returns the result and the commands it sent."""
+    reference model. Returns the result and the commands it sent. With only,
+    every tower in the layout is that tower instead."""
     bundle = config_tool.make_bundle(data)
     spec = stages.build_spec(stage, seed)
     towers = {t["id"]: t for t in data["towers"]["towers"]}
     fu = data["towers"]["field_upgrades"]
-    plan: list[tuple[str, list[int], str]] = [("place", place["tile"], place["tower"]) for place in stage["reference_layout"]]
-    for place in stage["reference_layout"]:
+    layout = [(place["tile"], only or place["tower"]) for place in stage["reference_layout"]]
+    plan: list[tuple[str, list[int], str]] = [("place", tile, tower) for tile, tower in layout]
+    for tile, tower in layout:
         for _ in range(fu["max_level"] - 1):
-            plan.append(("upgrade", place["tile"], place["tower"]))
+            plan.append(("upgrade", tile, tower))
     commands: list[dict] = []
     levels: dict[tuple[int, int], int] = {}
     next_from = 0
@@ -183,22 +189,29 @@ def playthrough(data: dict, stage: dict, seed: int = 1) -> tuple[sim_model.Resul
     return sim_model.run(sim_cases.case_from_spec(bundle, spec)), commands
 
 
-def report(data: dict, stage: dict) -> bool:
+def report(data: dict, stage: dict, strict_last: bool = False) -> bool:
     ok = True
     print(f"Stage {stage['id']}: {stage['credits']} starting credits, {len(stage['waves'])} waves")
     print(" wave      HP  spawn s  zone s  needs dps   credits  dps/credit  ratio  target")
     for r in pressure(data, stage):
         target = f"{r.target[0]:.1f}-{r.target[1]:.1f}" if r.target else ""
-        flag = "" if r.ok else "  << out of target"
-        ok = ok and r.ok
+        last = r.number == len(stage["waves"])
+        flag = "" if r.ok else ("  << out of target" if strict_last or not last else "  (reported, not gated: D-035)")
+        ok = ok and (r.ok or (last and not strict_last))
         print(f" {r.number:4d} {r.hp:7.0f} {r.spawn_s:8.1f} {r.kill_zone_s:7.1f} {r.required_dps:10.1f} "
               f"{r.credits:9.0f} {r.dps_per_credit:11.3f} {r.ratio:6.2f}  {target}{flag}")
     result, commands = playthrough(data, stage)
     upgrades = sum(1 for c in commands if c["type"] == "upgrade")
     print(f"Reference playthrough: {result.outcome} at {result.ticks / 20:.0f} s, {result.lives} of {stage['lives']} lives, "
           f"{result.kills} kills, {result.leaked} leaks; {len(commands) - upgrades} towers and {upgrades} upgrades")
-    if result.outcome != "cleared":
-        print("  << the reference layout loses this stage")
+    low, high = REFERENCE_LIVES
+    if result.outcome != "cleared" or not low <= result.lives <= high:
+        print(f"  << the reference builder should clear with {low} to {high} lives left")
+        ok = False
+    only, _ = playthrough(data, stage, only=ONLY_TOWER)
+    print(f"{ONLY_TOWER} only: {only.outcome} at {only.ticks / 20:.0f} s, {only.lives} lives, {only.kills} kills")
+    if only.outcome == "cleared":
+        print(f"  << {ONLY_TOWER} alone shouldn't clear the stage: counters must matter")
         ok = False
     return ok
 

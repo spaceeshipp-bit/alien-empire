@@ -9,7 +9,7 @@
       "speed_mtps": 2000,
       "movement": "ground",
       "leak_lives": 1,
-      "kill_credits_x100": 300,
+      "kill_credits_x100": 400,
       "abilities": []
     },
     {
@@ -21,7 +21,7 @@
       "speed_mtps": 700,
       "movement": "ground",
       "leak_lives": 3,
-      "kill_credits_x100": 2500,
+      "kill_credits_x100": 3000,
       "abilities": []
     },
     {
@@ -45,7 +45,7 @@
       "speed_mtps": 1600,
       "movement": "air",
       "leak_lives": 1,
-      "kill_credits_x100": 800,
+      "kill_credits_x100": 1000,
       "abilities": []
     },
     {
