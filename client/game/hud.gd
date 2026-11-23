@@ -10,6 +10,7 @@ signal sell_pressed
 signal sheet_closed
 signal pause_pressed
 signal start_pressed
+signal call_pressed
 signal speed_pressed
 signal resume_pressed
 signal restart_pressed
@@ -21,6 +22,9 @@ const S := preload("res://game/strings.gd")
 
 const TOP_HEIGHT := 92.0
 const SHEET_HEIGHT := 178.0
+## How long the call button stays off after the sheet changes or a wave is called.
+const CALL_LOCK_MS := 600
+const TOAST_SECONDS := 1.6
 
 var _wave_label: Label
 var _countdown_label: Label
@@ -37,6 +41,15 @@ var _next_row: HBoxContainer
 var _next_key: String = ""
 var _armed_card: String = ""
 var _last_lives: int = -1
+## The idle sheet's button that calls the next wave early, while that sheet shows.
+var _call_button: Button
+var _call_state: Array = [-1, 0, false]  # wave number, bonus, enabled
+## Until this time (Time.get_ticks_msec()), the call button stays off: it shows
+## where Start, Upgrade and Sell were a moment ago, so a double tap on one of
+## those, or on Call itself, must not call a wave.
+var _call_locked_until: int = 0
+## Toasts wait their turn instead of replacing one another.
+var _toast_queue: PackedStringArray = PackedStringArray()
 
 
 func _ready() -> void:
@@ -186,6 +199,7 @@ func _build_sheet() -> void:
 func _set_sheet(body: Control) -> void:
 	if _sheet_body != null:
 		_sheet_body.queue_free()
+	_call_button = null
 	_sheet_body = body
 	_sheet.add_child(body)
 
@@ -229,13 +243,48 @@ func set_next_wave(classes: Array, uncovered: Array) -> void:
 		toast(S.t("hud.uncovered", [", ".join(names)]))
 
 
+## The idle sheet: how to build, and the button that calls the next wave early.
 func show_hint() -> void:
 	var box := VBoxContainer.new()
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	var hint := _label(S.t("build.hint"), 24, Palette.MUTED)
+	box.add_theme_constant_override("separation", 8)
+	var hint := _label(S.t("build.hint"), 22, Palette.MUTED)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(hint)
-	_set_sheet(box)
+	var call_button := _button("", func() -> void: call_pressed.emit(), Palette.HIVE)
+	box.add_child(call_button)
+	_set_sheet(box)  # clears _call_button, which belonged to the old sheet
+	_call_button = call_button
+	lock_call(CALL_LOCK_MS)
+
+
+## What calling the next wave would pay now. wave is its number (from 1), or -1
+## when none is left; enabled is false while calling isn't possible.
+func set_call(wave: int, bonus: int, enabled: bool) -> void:
+	var state: Array = [wave, bonus, enabled]
+	if state == _call_state:
+		return
+	_call_state = state
+	_show_call()
+
+
+## Keeps the call button off for ms milliseconds from now.
+func lock_call(ms: int) -> void:
+	_call_locked_until = maxi(_call_locked_until, Time.get_ticks_msec() + ms)
+	_show_call()
+
+
+func call_locked() -> bool:
+	return Time.get_ticks_msec() < _call_locked_until
+
+
+func _show_call() -> void:
+	if _call_button == null or not is_instance_valid(_call_button):
+		return
+	var wave: int = _call_state[0]
+	_call_button.visible = wave >= 0
+	_call_button.text = S.t("hud.call", [wave, _call_state[1]])
+	_call_button.disabled = not _call_state[2] or call_locked()
 
 
 ## The build menu: a card per tower, dimmed when the credits can't cover it.
@@ -325,9 +374,9 @@ func _tower_card(t: Dictionary, affordable: bool) -> Control:
 	return card
 
 
-## The tower menu: its name and level, its stats, upgrade and sell.
+## The tower menu: its name and level, its stats and what it aims at, upgrade and sell.
 func show_tower(tower_id: String, level: int, damage: float, range_tiles: float, upgrade_cost: int,
-		refund: int, credits: int) -> void:
+		refund: int, credits: int, targeting: String) -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
 	var title_row := HBoxContainer.new()
@@ -338,7 +387,8 @@ func show_tower(tower_id: String, level: int, damage: float, range_tiles: float,
 	close.custom_minimum_size = Vector2(56, 48)
 	title_row.add_child(close)
 	box.add_child(title_row)
-	box.add_child(_label(S.t("tower.stats", ["%.1f" % damage, "%.2f" % range_tiles]), 20, Palette.MUTED))
+	box.add_child(_label("%s · %s" % [S.t("tower.stats", ["%.1f" % damage, "%.2f" % range_tiles]),
+			S.t("tower.targets", [S.t("targeting." + targeting)])], 20, Palette.MUTED))
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 12)
 	var upgrade: Button
@@ -370,15 +420,27 @@ func set_status(wave: int, waves: int, next_wave_seconds: int, lives: int, credi
 	_credits_label.text = S.t("hud.credits", [credits])
 
 
+## Shows a short message. One already showing finishes first; a repeat of a
+## message that's showing or waiting is dropped, and at most three wait.
 func toast(text: String) -> void:
-	_toast.text = text
-	_toast_t = 1.6
+	if _toast_t <= 0.0:
+		_toast.text = text
+		_toast_t = TOAST_SECONDS
+	elif text != _toast.text and not _toast_queue.has(text) and _toast_queue.size() < 3:
+		_toast_queue.append(text)
 
 
 func _process(delta: float) -> void:
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		_toast.modulate.a = clampf(_toast_t / 0.3, 0.0, 1.0)
+	elif not _toast_queue.is_empty():
+		_toast.text = _toast_queue[0]
+		_toast_queue.remove_at(0)
+		_toast_t = TOAST_SECONDS
+	if _call_locked_until > 0 and not call_locked():
+		_call_locked_until = 0
+		_show_call()
 	_lives_flash = maxf(0.0, _lives_flash - delta * 2.0)
 	_lives_label.add_theme_color_override("font_color", Palette.TEXT.lerp(Palette.DANGER, _lives_flash))
 	_lives_label.scale = Vector2.ONE * (1.0 + 0.25 * _lives_flash)

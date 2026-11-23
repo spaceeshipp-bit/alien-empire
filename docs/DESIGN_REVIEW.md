@@ -31,6 +31,8 @@ Three things in the build prompt itself hurt the feel. They are the owner's numb
 
 ## 2. M1 stage: fun and balance
 
+> **Superseded in part (2026-11-23):** the map, the waves and the reference layout below were replaced after the owner approved this review. The stage now has 13 pads with hairpins, the Plasma Torch reaches 2.2 tiles, and waves come as tight Swarmer packs, not streams (D-036, D-037). The measurements and reasoning here are kept as the record of why.
+
 ### What the measurements say
 
 - **The current stage can't be won at any spend it allows.** With the whole 10-tower reference layout built before wave 1 (1,500 credits; the stage pays 929 before the last wave), it still loses, in wave 9. It clears only with every tower at level 4, which is 7,200 credits.

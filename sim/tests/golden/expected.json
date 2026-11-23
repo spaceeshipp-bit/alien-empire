@@ -1,0 +1,117 @@
+{
+  "about": "Recorded by worker/cli/run_tests.gd --record. Every platform must reproduce these hashes.",
+  "config_hash": "fb2a5abb6d64ca528e73a4d5e5e30bbe1333688efb3cf24da73d5faa331f147f",
+  "recorded_with": "Linux, Godot 4.7.2-stable (official)",
+  "scenarios": {
+    "g01_single_lane": {
+      "checkpoints": [
+        "5bdab51af31e8a90",
+        "c5d764a8e55a02b4",
+        "7cd011f56c815318"
+      ],
+      "credits_x100": 0,
+      "final_hash": "29d8be0622488c5ebfd33b6639bcebcb94deef75063be4ed2d45d9ce6fa53cca",
+      "kills": 0,
+      "leaked": 20,
+      "lives": 999980,
+      "outcome": "cleared",
+      "refused": 0,
+      "spawned": 20,
+      "ticks": 307
+    },
+    "g02_bends_and_jitter": {
+      "checkpoints": [
+        "06184821a92529f9",
+        "78bf73b986e03758",
+        "8f504a55dc6c5c98",
+        "38c0b610d2158d9c",
+        "f9c50e4d82730938",
+        "2e4d8466a99c75ee",
+        "9e97a4ae8f0046c9",
+        "8872459b8315d4e3"
+      ],
+      "credits_x100": 0,
+      "final_hash": "86a83fb3a589d056aa477a37e684e7bd74889a6eaa2628a2fbef4891406e7381",
+      "kills": 0,
+      "leaked": 34,
+      "lives": 999958,
+      "outcome": "cleared",
+      "refused": 0,
+      "spawned": 34,
+      "ticks": 865
+    },
+    "g03_air_and_titans": {
+      "checkpoints": [
+        "8bdf27df371fb28c",
+        "a01a13f6decaa073",
+        "5325ba3c81eca0a9",
+        "b59e58f11b3324d6",
+        "08c4eaa1e32248cd",
+        "42ebf4922666dfce",
+        "38f3e8b70f7d4321",
+        "ec6b822ba9e7d409",
+        "51776d99375ae3dd",
+        "0ae3351c04a52fda",
+        "ee1efe3bc9323dcb"
+      ],
+      "credits_x100": 0,
+      "final_hash": "2baf9750e9247ff12ceecc3be3317b413362e7c03245a263b25718e86fe67b7a",
+      "kills": 0,
+      "leaked": 50,
+      "lives": 999950,
+      "outcome": "cleared",
+      "refused": 0,
+      "spawned": 50,
+      "ticks": 1132
+    },
+    "g04_dense_three_lanes": {
+      "checkpoints": [
+        "334b1e568fd4e615",
+        "5ff898bf5dea801f",
+        "4f01afb389d9c2c5",
+        "4317efb39fe6c076",
+        "2c65cb6b312074fd",
+        "65dc13cedf39c791",
+        "8ff1d074b3ba05b3",
+        "2f17559ad3cde247",
+        "739dc8444ec2e91b"
+      ],
+      "credits_x100": 0,
+      "final_hash": "78e28fb9fbbf55b99b438979321e08939b074a661d3422a2c15eb2196f78e82d",
+      "kills": 0,
+      "leaked": 300,
+      "lives": 999640,
+      "outcome": "cleared",
+      "refused": 0,
+      "spawned": 300,
+      "ticks": 937
+    },
+    "g05_field_towers": {
+      "checkpoints": [
+        "cc99382970ab54a3",
+        "c1e327d1b7706ed3",
+        "56aca4f6da216d10",
+        "2cab12825dd6731a",
+        "942d7e9fffaa9d1f",
+        "0b9ee1b7955b106b",
+        "24815cc47947dbf1",
+        "7e4485b741e5e2fc",
+        "6e80aa407cfd46d6",
+        "b8d412d786fbbbf7",
+        "d0bacaee7ccce5bf",
+        "21b5409825fb9b8f",
+        "1fd8e42070ad0586"
+      ],
+      "credits_x100": 5194,
+      "final_hash": "a77dfb669f38a48f12c1596e0545b51dfb2cdce8500d9c46853d2a827e077279",
+      "kills": 10,
+      "leaked": 19,
+      "lives": 9,
+      "outcome": "cleared",
+      "refused": 3,
+      "spawned": 29,
+      "ticks": 1320
+    }
+  },
+  "sim_version": 3
+}

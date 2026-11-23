@@ -42,6 +42,7 @@ var _started: bool = false
 var _speed: int = 1
 ## The tower whose card was tapped once: its range shows, and a second tap builds it.
 var _armed: String = ""
+var _clean_waves: int = 0
 
 
 func _ready() -> void:
@@ -72,6 +73,7 @@ func _ready() -> void:
 		_speed = 2 if _speed == 1 else 1
 		_hud.set_speed(_speed)
 	)
+	_hud.call_pressed.connect(_on_call)
 	var problem: String = _start()
 	if not problem.is_empty():
 		_ended = true
@@ -116,7 +118,17 @@ func _start() -> String:
 	_started = _autoplay
 	if not _started:
 		_hud.show_start()
-	_map.command_refused.connect(func() -> void: _hud.toast(S.t("build.cant_afford")))
+	_map.command_refused.connect(func(kind: String) -> void:
+		_hud.toast(S.t("hud.no_wave") if kind == "call_wave" else S.t("build.cant_afford"))
+	)
+	_map.wave_called.connect(func(wave: int, bonus_x100: int) -> void:
+		_hud.toast(S.t("hud.called", [wave + 1, bonus_x100 / 100]))
+	)
+	_map.wave_done.connect(func(wave: int, clean: bool) -> void:
+		if clean:
+			_clean_waves += 1
+			_hud.toast(S.t("hud.clean", [wave + 1, int(_spec_data["clean_wave_credits"])]))
+	)
 	_update_hud()
 	return ""
 
@@ -157,19 +169,44 @@ func _step() -> void:
 
 func _update_hud() -> void:
 	var tick: int = _battle.tick
-	var starts: PackedInt64Array = _spec.wave_starts
+	# The battle's own wave starts: calling a wave early moves every later one.
+	var starts: PackedInt64Array = _battle.wave_starts
 	var wave: int = 0
-	var next_seconds: int = -1
-	for start: int in starts:
-		if start <= tick:
+	var next: int = -1  # the next wave's index, or -1 when every wave has started
+	for i in starts.size():
+		if starts[i] <= tick:
 			wave += 1
-		elif next_seconds < 0:
-			next_seconds = int(ceil(float(start - tick) * TICK))
+		elif next < 0 or starts[i] < starts[next]:
+			next = i
+	var next_seconds: int = int(ceil(float(starts[next] - tick) * TICK)) if next >= 0 else -1
 	_hud.set_status(wave, starts.size(), next_seconds, _battle.lives, _battle.credits_x100 / 100)
-	if wave < starts.size():
-		_hud.set_next_wave(_wave_classes(wave), _uncovered(_wave_classes(wave)))
+	if next >= 0:
+		_hud.set_next_wave(_wave_classes(next), _uncovered(_wave_classes(next)))
+		_hud.set_call(next + 1, _call_bonus_x100(starts[next] - tick) / 100, _started and not _ended and not _paused)
 	else:
 		_hud.set_next_wave([], [])
+		_hud.set_call(-1, 0, false)
+
+
+## What calling a wave this many ticks away pays (x100), as the sim works it out (D-036).
+func _call_bonus_x100(skip_ticks: int) -> int:
+	return mini(skip_ticks * int(_spec_data["call_credits_per_s"]) * 100 / 20, int(_spec_data["call_credits_max"]) * 100)
+
+
+func _on_call() -> void:
+	if not _started or _ended or _paused or _hud.call_locked():
+		return
+	var waiting: bool = false
+	for start: int in _battle.wave_starts:
+		waiting = waiting or start > _battle.tick
+	if not waiting:
+		return
+	var problem: String = _battle.queue_command("call_wave", Vector2i.ZERO)
+	if not problem.is_empty():
+		_hud.toast(problem)
+		return
+	# The button now names the wave after; a second tap of a double tap must not call it.
+	_hud.lock_call(Hud.CALL_LOCK_MS)
 
 
 ## The classes in wave index (counted from 0), in order of first appearance.
@@ -227,8 +264,9 @@ func _show_sheet() -> void:
 		return
 	var tower_type: String = _config.tower_ids()[int(tower.type_index)]
 	var upgrade: int = int(tower.upgrade_cost_x100)
+	var targeting: String = _config.TARGETING[_config.tower(tower_type).targeting]
 	_hud.show_tower(tower_type, int(tower.level), float(tower.damage_x100) / 100.0, float(tower.range_mt) / 1000.0,
-			-1 if upgrade < 0 else int(ceil(upgrade / 100.0)), int(tower.refund_x100) / 100, credits)
+			-1 if upgrade < 0 else int(ceil(upgrade / 100.0)), int(tower.refund_x100) / 100, credits, targeting)
 
 
 ## The class icons a tower's card shows: what it's strong against, and air if it can hit air.
@@ -333,7 +371,8 @@ func _autoplay_turn() -> void:
 
 func _queued_this_tick(tile: Vector2i) -> bool:
 	for c: Dictionary in _battle.command_log():
-		if int(c["tick"]) >= _battle.tick and int(c["args"]["tile"][0]) == tile.x and int(c["args"]["tile"][1]) == tile.y:
+		var at: Array = c["args"].get("tile", [])
+		if int(c["tick"]) >= _battle.tick and not at.is_empty() and int(at[0]) == tile.x and int(at[1]) == tile.y:
 			return true
 	return false
 
@@ -348,7 +387,8 @@ func _finish() -> void:
 	var kept: float = float(_battle.lives) / float(_spec_data["lives"])
 	var stars: int = 0 if not won else (3 if kept >= 0.9 else (2 if kept >= 0.5 else 1))
 	var lines: PackedStringArray = PackedStringArray([S.t("end.stars", [stars]),
-			S.t("end.stats", [result["kills"], result["lives"], int(result["credits_x100"]) / 100])])
+			S.t("end.stats", [result["kills"], result["lives"], int(result["credits_x100"]) / 100]),
+			S.t("end.clean", [_clean_waves, _battle.wave_starts.size()])])
 	var best_id: int = -1
 	for id: int in _map.kills_by_tower:
 		if best_id < 0 or int(_map.kills_by_tower[id]) > int(_map.kills_by_tower[best_id]):

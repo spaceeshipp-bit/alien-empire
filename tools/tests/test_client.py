@@ -21,3 +21,10 @@ def test_tower_names_cover_the_config():
     table = json.loads((CLIENT / "strings" / "en.json").read_text(encoding="utf-8"))["strings"]
     towers = json.loads((REPO / "config" / "balance" / "towers.json").read_text(encoding="utf-8"))["towers"]
     assert [t["id"] for t in towers if f"tower.{t['id']}" not in table] == []
+
+
+def test_targeting_names_cover_the_schema():
+    table = json.loads((CLIENT / "strings" / "en.json").read_text(encoding="utf-8"))["strings"]
+    schema = json.loads((REPO / "config" / "schema" / "towers.schema.json").read_text(encoding="utf-8"))
+    rules = schema["$defs"]["tower"]["properties"]["targeting"]["enum"]
+    assert rules and [r for r in rules if f"targeting.{r}" not in table] == []

@@ -6,8 +6,13 @@ extends Node2D
 ## never feeds anything back, so what's drawn can't change a battle's result.
 
 signal tile_tapped(tile: Vector2i)
-## The sim skipped a command: the state couldn't take it when it applied.
-signal command_refused
+## The sim skipped a command (kind: place, upgrade, sell or call_wave): the
+## state couldn't take it when it applied.
+signal command_refused(kind: String)
+## A wave's last alien died or leaked (wave counted from 0); clean when none leaked.
+signal wave_done(wave: int, clean: bool)
+## The player called a wave early (counted from 0) and was paid bonus_x100.
+signal wave_called(wave: int, bonus_x100: int)
 
 const Ground := preload("res://game/ground.gd")
 const AlienView := preload("res://game/alien_view.gd")
@@ -26,6 +31,8 @@ const PLACED := 4
 const UPGRADED := 5
 const SOLD := 6
 const REFUSED := 7
+const WAVE_DONE := 8
+const CALLED := 9
 
 ## Pixels a tile, and pixels a thousandth of a tile.
 var tile_px: float = 80.0
@@ -202,6 +209,7 @@ func _play_events(credits_before: int) -> void:
 	var events: PackedInt64Array = _battle.events()
 	var kills: Array = []
 	var commands: bool = false
+	var bonus_x100: int = 0  # wave bonuses paid this tick, kept out of the kill numbers
 	for i in range(0, events.size(), 5):
 		var kind: int = events[i]
 		var at := Vector2(float(events[i + 3]), float(events[i + 4])) * k
@@ -230,16 +238,36 @@ func _play_events(credits_before: int) -> void:
 				_fx.ring(at, tile_px * 0.3, tile_px * 0.9, Palette.YOU, 5.0, 0.45)
 				_fx.burst(at, Palette.EYE, 14, tile_px * 1.8, tile_px * 0.06, 0.45)
 			REFUSED:
-				command_refused.emit()
+				var logged: Array = _battle.command_log()
+				var index: int = int(events[i + 1])
+				command_refused.emit(String(logged[index]["type"]) if index >= 0 and index < logged.size() else "")
 			SOLD:
 				commands = true
 				_fx.burst(at, Palette.YOU, 18, tile_px * 2.4, tile_px * 0.07, 0.5)
 				_sold[int(events[i + 1])] = true
+			WAVE_DONE:
+				var clean: bool = events[i + 2] != 0
+				if clean:
+					var paid: int = int(_stage.get("clean_wave_credits", 0))
+					bonus_x100 += paid * 100
+					_fx.ring(_core.position, tile_px * 0.5, tile_px * 2.2, Palette.YOU, 6.0, 0.8)
+					_fx.burst(_core.position, Palette.EYE, 20, tile_px * 2.6, tile_px * 0.08, 0.7)
+					if paid > 0:
+						_fx.text(_core.position + Vector2(0, -tile_px * 0.8), "+%d" % paid, Palette.EYE)
+				wave_done.emit(int(events[i + 1]), clean)
+			CALLED:
+				bonus_x100 += int(events[i + 2])
+				for lane: Dictionary in _stage["lanes"]:
+					var start: Array = lane["ground"][0]
+					var entry := Vector2(float(start[0]), float(start[1])) * k + Vector2(0, tile_px * 0.4)
+					_fx.ring(entry, tile_px * 0.2, tile_px * 1.4, Palette.HIVE, 5.0, 0.6)
+				wave_called.emit(int(events[i + 1]), int(events[i + 2]))
 	# Kill credits float up from the kills: what the credits gained this tick,
-	# shared between them. In the rare tick that also ran a command, the gain
-	# mixes in its cost, so the numbers are skipped rather than guessed.
+	# less any wave bonus, shared between them. In the rare tick that also ran a
+	# build command, the gain mixes in its cost, so the numbers are skipped
+	# rather than guessed.
 	if not kills.is_empty() and not commands:
-		var each: int = int(round(float(_battle.credits_x100 - credits_before) / kills.size() / 100.0))
+		var each: int = int(round(float(_battle.credits_x100 - credits_before - bonus_x100) / kills.size() / 100.0))
 		if each > 0:
 			for at: Vector2 in kills:
 				_fx.text(at, "+%d" % each, Palette.EYE)
