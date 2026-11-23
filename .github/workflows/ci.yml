@@ -161,7 +161,9 @@ jobs:
           sudo apt-get install -y -q xvfb libgl1-mesa-dri
           xvfb-run -a tools/ci/run_godot.sh 600 godot --path client --rendering-driver opengl3 -- --run-tests-and-quit
       - name: A battle played through the screen replays to the same hash, and its video
-        run: tools/ci/battle_check.sh --video
+        run: |
+          sudo apt-get install -y -q ffmpeg
+          tools/ci/battle_check.sh --video
       - uses: actions/upload-artifact@v7
         if: always()
         with:
