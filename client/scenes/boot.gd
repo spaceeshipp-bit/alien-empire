@@ -1,5 +1,5 @@
 extends Control
-## M0 test build home screen. Started with the user argument
+## Test build home screen: the M1 battle, and M0's checks. Started with the user argument
 ## --run-tests-and-quit (desktop CI), it runs the sim tests, checks that the
 ## Plugin Lab builds, prints the report and exits with 0 only if all passed.
 ## Nothing here needs the sim library (SimLibrary), so the Plugin Lab opens
@@ -8,6 +8,7 @@ extends Control
 const Ui := preload("res://ui/ui_kit.gd")
 const SimLibrary := preload("res://ui/sim_library.gd")
 const BuildInfo := preload("res://ui/build_info.gd")
+const Strings := preload("res://game/strings.gd")
 
 
 func _ready() -> void:
@@ -17,9 +18,13 @@ func _ready() -> void:
 		get_tree().quit(0 if sim_ok and lab_ok else 1)
 		return
 	var column: VBoxContainer = Ui.screen(self, "Alien Empire TD")
-	column.add_child(Ui.label("M0 test build · %s · %s · Godot %s" % [
+	column.add_child(Ui.label("M1 test build · %s · %s · Godot %s" % [
 		BuildInfo.label(), SimLibrary.label(), Engine.get_version_info()["string"],
 	], 22, Ui.MUTED))
+	column.add_child(Ui.button(Strings.t("menu.play"), func() -> void:
+		get_tree().change_scene_to_file("res://scenes/battle.tscn")
+	))
+	column.add_child(Ui.label(Strings.t("menu.play_hint"), 22, Ui.MUTED))
 	column.add_child(Ui.button("Sim tests", func() -> void:
 		get_tree().change_scene_to_file("res://scenes/sim_tests.tscn")
 	))

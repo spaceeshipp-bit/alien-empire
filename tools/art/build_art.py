@@ -49,6 +49,14 @@ def palette_gd() -> str:
     lines += ["", "## Class colors (D-032), keyed by the class names in config/balance/.", "const CLASS_COLORS := {"]
     lines += [f'\t"{kind}": {_godot_color(v["color"])}' .replace("  #", ",  #") for kind, v in sprites.CLASSES.items()]
     lines += ["}", ""]
+    lines += ["## How big each alien looks, against a tile (1.0 is the sprite as drawn).", "const ALIEN_SCALE := {"]
+    lines += [f'\t"{key}": {scale},' for key, _name, _kind, _draw, scale in sprites.ALIENS]
+    lines += ["}", ""]
+    sizes = {rel.split("/")[-1][:-4]: int(text.split('width="')[1].split('"')[0])
+             for rel, text in sprites.sprite_files().items() if rel.startswith(("aliens/", "towers/", "core/"))}
+    lines += ["## Each sprite's size in units, 100 to a tile; textures import at 2 pixels a unit.", "const SPRITE_UNITS := {"]
+    lines += [f'\t"{key}": {units},' for key, units in sorted(sizes.items())]
+    lines += ["}", ""]
     return "\n".join(lines)
 
 

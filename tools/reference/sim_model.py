@@ -268,8 +268,10 @@ def hit_result(damage: int, rating_bp: int, cloaked: bool, unrevealed_bp: int, s
     return shield, max(damage * (10000 - reduction) // 10000, rules.min_damage_x100)
 
 
-def run(case) -> Result:
-    """Plays a battle (a tools/sim_cases.Case that the core accepts)."""
+def run(case, credits_trace: list | None = None) -> Result:
+    """Plays a battle (a tools/sim_cases.Case that the core accepts). With
+    credits_trace, appends the credits (x100) at the start of every tick, before
+    its commands, for tools that plan commands (tools/wave_pressure.py)."""
     paths = []
     for lane in case.lanes:
         ground = build_path(lane.ground)
@@ -364,6 +366,8 @@ def run(case) -> Result:
     reuse_had_aliens = None
     while outcome == RUNNING:
         c = s["tick"]
+        if credits_trace is not None:
+            credits_trace.append(s["credits"])
         # 1. Commands
         while s["cmd"] < len(case.commands) and case.commands[s["cmd"]].tick == c:
             cmd = case.commands[s["cmd"]]

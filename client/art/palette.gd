@@ -29,3 +29,31 @@ const CLASS_COLORS := {
 	"cloaked": Color(0.9294, 0.7333, 0.9843),  # #edbbfb
 	"titan": Color(0.9412, 0.5490, 0.5569),  # #f08c8e
 }
+
+## How big each alien looks, against a tile (1.0 is the sprite as drawn).
+const ALIEN_SCALE := {
+	"swarmer": 0.85,
+	"carapace_brute": 1.0,
+	"shield_drone": 0.9,
+	"skimmer": 0.95,
+	"phaser": 0.95,
+	"hive_carrier": 1.0,
+}
+
+## Each sprite's size in units, 100 to a tile; textures import at 2 pixels a unit.
+const SPRITE_UNITS := {
+	"base": 100,
+	"carapace_brute": 100,
+	"core": 200,
+	"flak_battery": 140,
+	"hive_carrier": 170,
+	"ion_disruptor": 140,
+	"phaser": 100,
+	"plasma_torch": 140,
+	"pulse_turret": 140,
+	"railgun": 140,
+	"sensor_beacon": 140,
+	"shield_drone": 100,
+	"skimmer": 100,
+	"swarmer": 100,
+}
