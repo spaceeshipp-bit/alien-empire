@@ -25,6 +25,9 @@ func _ready() -> void:
 		get_tree().change_scene_to_file("res://scenes/battle.tscn")
 	))
 	column.add_child(Ui.label(Strings.t("menu.play_hint"), 22, Ui.MUTED))
+	column.add_child(Ui.button("Performance test", func() -> void:
+		get_tree().change_scene_to_file("res://scenes/perf.tscn")
+	))
 	column.add_child(Ui.button("Sim tests", func() -> void:
 		get_tree().change_scene_to_file("res://scenes/sim_tests.tscn")
 	))
