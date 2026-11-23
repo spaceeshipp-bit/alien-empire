@@ -210,3 +210,15 @@ def test_battle_unknown_enemy_and_lane(data):
 def test_cli_validate(capsys):
     assert ct.main(["validate"]) == 0
     assert "config OK" in capsys.readouterr().out
+
+
+def test_releases_are_one_level_and_once(data, registry):
+    """A release that releases again could multiply aliens without limit (D-034)."""
+    chained = copy.deepcopy(data)
+    swarmer = next(e for e in chained["enemies"]["enemies"] if e["id"] == "swarmer")
+    swarmer["abilities"] = [{"type": "spawn_on_death", "enemy": "swarmer", "count": 1}]
+    assert any("releases others" in e for e in ct.validate_balance(chained, registry))
+    twice = copy.deepcopy(data)
+    carrier = next(e for e in twice["enemies"]["enemies"] if e["id"] == "hive_carrier")
+    carrier["abilities"].append({"type": "spawn_on_death", "enemy": "swarmer", "count": 1})
+    assert "enemies: hive_carrier lists an ability twice" in ct.validate_balance(twice, registry)

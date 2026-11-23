@@ -1,5 +1,7 @@
 #include "godot/bindings.h"
 
+#include <algorithm>
+
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/error_macros.hpp>
 
@@ -529,7 +531,7 @@ PackedInt64Array SimNativeBattle::get_events() const {
 int64_t SimNativeBattle::upgrade_cost_x100(int64_t type_index, int64_t level) const {
 	ERR_FAIL_COND_V_MSG(!ready || type_index < 0 || type_index >= int64_t(battle.config().towers.size()), -1,
 			"SimNativeBattle.upgrade_cost_x100: no such tower type");
-	return battle.upgrade_cost_x100(type_index, level);
+	return battle.upgrade_cost_x100(type_index, std::clamp<int64_t>(level, 1, battle.config().upgrades.max_level));
 }
 
 Array SimNativeBattle::get_commands() const {

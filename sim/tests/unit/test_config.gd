@@ -140,3 +140,19 @@ func test_refuses_an_unknown_rating() -> bool:
 	var config := SimConfig.new()
 	expect_true(not config.load_bundle(bundle), "an unknown rating is refused")
 	return true
+
+
+func test_refuses_release_chains_and_second_releases() -> bool:
+	var chained: Dictionary = load_json(BUNDLE)
+	for e: Dictionary in chained["data"]["enemies"]["enemies"]:
+		if e["id"] == "swarmer":
+			e["abilities"] = [{"type": "spawn_on_death", "enemy": "swarmer", "count": 1}]
+	var config := SimConfig.new()
+	expect_true(not config.load_bundle(chained), "an alien whose release releases again is refused")
+	var twice: Dictionary = load_json(BUNDLE)
+	for e: Dictionary in twice["data"]["enemies"]["enemies"]:
+		if e["id"] == "hive_carrier":
+			e["abilities"].append({"type": "spawn_on_death", "enemy": "swarmer", "count": 1})
+	config = SimConfig.new()
+	expect_true(not config.load_bundle(twice), "a second spawn_on_death is refused")
+	return true

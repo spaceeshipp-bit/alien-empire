@@ -177,6 +177,8 @@ func _read_enemies(r: DataReader, part: Dictionary) -> void:
 			var kind: String = r.get_string(a, "type", "%s.abilities[%d]" % [path, k])
 			if not ENEMY_ABILITIES_RUN.has(kind):
 				e.supported = false
+			elif kind == "spawn_on_death" and not e.release_id.is_empty():
+				r.fail("%s.abilities[%d]" % [path, k], "a second spawn_on_death")
 			elif kind == "spawn_on_death":
 				e.release_id = r.get_string(a, "enemy", "%s.abilities[%d]" % [path, k])
 				e.release_count = r.get_int(a, "count", "%s.abilities[%d]" % [path, k], 1, MAX_RELEASE)
@@ -198,6 +200,8 @@ func _read_enemies(r: DataReader, part: Dictionary) -> void:
 			r.fail("data.enemies", "%s releases unknown enemy %s" % [e.id, e.release_id])
 		elif released.air != e.air:
 			r.fail("data.enemies", "%s releases %s, which moves differently" % [e.id, e.release_id])
+		elif not released.release_id.is_empty():
+			r.fail("data.enemies", "%s releases %s, which releases others; the sim allows one level (D-034)" % [e.id, e.release_id])
 
 
 func _read_damage(r: DataReader, damage: Dictionary) -> void:

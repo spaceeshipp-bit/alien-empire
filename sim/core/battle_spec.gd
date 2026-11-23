@@ -163,6 +163,7 @@ func _parse_path(r: DataReader, points: Array, path: String) -> LanePath:
 		var y: int = r.to_int(pair[1], where + "[1]")
 		if x < 0 or x > MAX_COORD_MT or y < 0 or y > MAX_COORD_MT:
 			r.fail(where, "coordinates must be within 0..%d" % MAX_COORD_MT)
+			return LanePath.new()  # never built: the spec is refused
 		px.append(x)
 		py.append(y)
 	var lane_path := LanePath.new()

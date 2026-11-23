@@ -101,6 +101,7 @@ func _start() -> String:
 	add_child(_map)
 	_map.setup(_battle, _config, _stage, tile)
 	_map.tile_tapped.connect(_on_tile)
+	_map.command_refused.connect(func() -> void: _hud.toast(S.t("build.cant_afford")))
 	_update_hud()
 	return ""
 
@@ -278,7 +279,8 @@ func _queued_this_tick(tile: Vector2i) -> bool:
 func _finish() -> void:
 	_ended = true
 	var result: Dictionary = _battle.result()
-	var won: bool = _battle.outcome != 3 and _battle.lives > 0
+	# Only clearing every wave wins; running out of time with aliens left is a loss.
+	var won: bool = _battle.outcome == 1
 	_hud.show_end(won, S.t("end.stats", [result["kills"], result["lives"], int(result["credits_x100"]) / 100]))
 	print("Battle %s: %s at tick %d, lives %d, kills %d, credits %d, hash %s" % [
 		_stage["id"], result["outcome"], result["ticks"], result["lives"], result["kills"],
@@ -287,6 +289,11 @@ func _finish() -> void:
 		var spec_with_log: Dictionary = _spec_data.duplicate(true)
 		spec_with_log["commands"] = _battle.command_log()
 		var file := FileAccess.open(_replay_out, FileAccess.WRITE)
+		if file == null:
+			printerr("can't write %s: %s" % [_replay_out, error_string(FileAccess.get_open_error())])
+			if _quit_at_end:
+				get_tree().quit(1)
+			return
 		file.store_string(JSON.stringify({"spec": spec_with_log, "result": result}, " "))
 		file.close()
 	if _quit_at_end:

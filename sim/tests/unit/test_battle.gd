@@ -365,3 +365,11 @@ func test_towers_with_abilities_wait_for_m2() -> bool:
 	expect_true(not battle.setup(_config(), spec), "setup refuses a tower whose slow isn't in this sim version")
 	expect_true("ability" in str(battle.errors), "and says why: %s" % str(battle.errors))
 	return true
+
+
+func test_spec_refuses_coordinates_past_the_limit_without_building() -> bool:
+	var spec_data: Dictionary = _spec([_group("swarmer", 1)])
+	spec_data["map"]["lanes"][0]["ground"] = [[0, 0], [9007199254740991, 0]]
+	var spec := BattleSpec.new()
+	expect_true(not spec.parse(spec_data), "a lane far off the map is refused")
+	return true

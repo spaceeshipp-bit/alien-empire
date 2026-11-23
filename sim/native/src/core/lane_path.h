@@ -16,6 +16,7 @@ struct Point {
 
 class LanePath {
 public:
+	static constexpr int64_t MAX_COORD_MT = 1000000;
 	// Builds the path from waypoint coordinates; repeated consecutive points are
 	// skipped. Returns "" on success, or what's wrong.
 	std::string build(const std::vector<int64_t> &px, const std::vector<int64_t> &py);

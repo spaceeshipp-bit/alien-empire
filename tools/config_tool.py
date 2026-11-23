@@ -132,9 +132,21 @@ def check_references(data: dict[str, Any]) -> list[str]:
         eid = enemy["id"]
         if (enemy["class"] == "air") != (enemy["movement"] == "air"):
             errors.append(f"enemies: {eid} must use air movement if and only if its class is air")
+        types = [a["type"] for a in enemy["abilities"]]
+        if len(types) != len(set(types)):
+            errors.append(f"enemies: {eid} lists an ability twice")
         for ability in enemy["abilities"]:
             if ability["type"] == "spawn_on_death" and ability["enemy"] not in enemy_by_id:
                 errors.append(f"enemies: {eid} spawns unknown enemy {ability['enemy']}")
+            elif ability["type"] == "spawn_on_death":
+                released = enemy_by_id[ability["enemy"]]
+                if any(a["type"] == "spawn_on_death" for a in released["abilities"]):
+                    errors.append(f"enemies: {eid} releases {released['id']}, which releases others; "
+                                  "the sim allows one level (D-034)")
+                if released["movement"] != enemy["movement"]:
+                    errors.append(f"enemies: {eid} releases {released['id']}, which moves differently")
+                if ability["count"] > 100:
+                    errors.append(f"enemies: {eid} releases more than 100")
 
     # spawn_on_death chains must end, or one death could spawn forever
     def spawns(eid: str) -> list[str]:

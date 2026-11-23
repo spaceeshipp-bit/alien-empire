@@ -40,6 +40,8 @@ func setup(alien_id: int, type_id: String, klass: String, is_air: bool, tile_px:
 	_base_scale = Art.sprite_scale(tile_px) * scale_by
 	_body.scale = Vector2(_base_scale, _base_scale)
 	_body.modulate = Color.WHITE
+	_body.position = Vector2.ZERO  # a pooled view may last have been a flyer
+	facing = 0.0
 	color = Art.class_color(klass)
 	_halo.modulate = Color(color, 0.5 if not air else 0.35)
 	var halo_px: float = tile_px * 0.95 * scale_by * float(Palette.SPRITE_UNITS.get(type_id, 100)) / 100.0

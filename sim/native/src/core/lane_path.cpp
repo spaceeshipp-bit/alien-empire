@@ -13,6 +13,14 @@ std::string LanePath::build(const std::vector<int64_t> &px, const std::vector<in
 		return "x and y lists differ in length";
 	}
 	for (size_t i = 0; i < px.size(); i++) {
+		// 1,000 tiles each way keeps every squared distance far from overflow.
+		if (px[i] < 0 || px[i] > MAX_COORD_MT || py[i] < 0 || py[i] > MAX_COORD_MT) {
+			xs.clear();
+			ys.clear();
+			starts.clear();
+			length = 0;
+			return "a point is outside 0.." + std::to_string(MAX_COORD_MT);
+		}
 		if (!xs.empty()) {
 			const int64_t dx = px[i] - xs.back();
 			const int64_t dy = py[i] - ys.back();

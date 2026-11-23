@@ -114,6 +114,9 @@ bool Battle::setup(BattleConfig config, BattleSpec spec) {
 				errors.push_back("enemy " + std::to_string(e) + ": releases an unknown enemy or too many");
 			} else if (config_.enemies[size_t(t.release_index)].air != t.air) {
 				errors.push_back("enemy " + std::to_string(e) + ": releases an enemy that moves differently");
+			} else if (config_.enemies[size_t(t.release_index)].release_index != -1) {
+				// One level only: chains could multiply aliens without limit.
+				errors.push_back("enemy " + std::to_string(e) + ": releases an enemy that releases others");
 			}
 		}
 	}
@@ -204,10 +207,13 @@ bool Battle::setup(BattleConfig config, BattleSpec spec) {
 		if (config_.enemies[group.enemy_index].air && !spec_.lanes[group.lane_index].air) {
 			errors.push_back(where + ": air enemy needs an air route");
 		}
-		if (!config_.enemies[group.enemy_index].supported) {
+		const EnemyType &type = config_.enemies[group.enemy_index];
+		const bool releases = in_range(type.release_index, 0, int64_t(config_.enemies.size()) - 1);
+		if (!type.supported || (releases && !config_.enemies[size_t(type.release_index)].supported)) {
 			errors.push_back(where + ": enemy has an ability this sim version doesn't run");
 		}
-		total_spawns += group.count;
+		// Every alien it could ever release counts against the limit too.
+		total_spawns += group.count * (1 + (releases ? std::min(type.release_count, MAX_RELEASE) : 0));
 	}
 	if (total_spawns > SEQ_MASK) {
 		errors.push_back("too many spawns: " + std::to_string(total_spawns));

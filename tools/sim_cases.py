@@ -343,8 +343,8 @@ def _random_bundle(rnd: random.Random) -> dict:
             "kill_credits_x100": stat(0),
             "abilities": [],
         })
-    for e in enemies:  # now and then, one releases a same-moving alien with a lower index
-        same = [o for o in enemies[:enemies.index(e)] if o["movement"] == e["movement"]]
+    for e in enemies:  # now and then, one releases a same-moving alien that releases nothing (one level, D-034)
+        same = [o for o in enemies[:enemies.index(e)] if o["movement"] == e["movement"] and not o["abilities"]]
         if same and rnd.random() < 0.3:
             e["abilities"].append({"type": "spawn_on_death", "enemy": rnd.choice(same)["id"],
                                    "count": rnd.choice((1, 2, 6, CORE_MAX_RELEASE))})
@@ -715,6 +715,12 @@ def _break_unsupported(rnd: random.Random, case: Case) -> Case:
 def _break_release(rnd: random.Random, case: Case) -> Case:
     enemies = list(case.enemies)
     e = rnd.randrange(len(enemies))
+    if len(enemies) >= 2 and rnd.random() < 0.3:
+        # A chain: e releases f, which releases e. Same movement, so only the chain is wrong.
+        f = (e + 1) % len(enemies)
+        enemies[f] = dataclasses.replace(enemies[f], air=enemies[e].air, release_index=e, release_count=1)
+        enemies[e] = dataclasses.replace(enemies[e], release_index=f, release_count=1)
+        return dataclasses.replace(case, enemies=tuple(enemies), broken=f"enemies {e} and {f} release each other")
     bad = rnd.choice(((len(enemies), 1), (-2, 1), (e, 0), (e, CORE_MAX_RELEASE + 1)))
     enemies[e] = dataclasses.replace(enemies[e], release_index=bad[0], release_count=bad[1])
     return dataclasses.replace(case, enemies=tuple(enemies), broken=f"enemy {e} release")

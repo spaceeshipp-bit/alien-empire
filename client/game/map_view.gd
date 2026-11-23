@@ -6,6 +6,8 @@ extends Node2D
 ## never feeds anything back, so what's drawn can't change a battle's result.
 
 signal tile_tapped(tile: Vector2i)
+## The sim skipped a command: the state couldn't take it when it applied.
+signal command_refused
 
 const Ground := preload("res://game/ground.gd")
 const AlienView := preload("res://game/alien_view.gd")
@@ -23,6 +25,7 @@ const LEAK := 3
 const PLACED := 4
 const UPGRADED := 5
 const SOLD := 6
+const REFUSED := 7
 
 ## Pixels a tile, and pixels a thousandth of a tile.
 var tile_px: float = 80.0
@@ -217,6 +220,8 @@ func _play_events(credits_before: int) -> void:
 				commands = true
 				_fx.ring(at, tile_px * 0.3, tile_px * 0.9, Palette.YOU, 5.0, 0.45)
 				_fx.burst(at, Palette.EYE, 14, tile_px * 1.8, tile_px * 0.06, 0.45)
+			REFUSED:
+				command_refused.emit()
 			SOLD:
 				commands = true
 				_fx.burst(at, Palette.YOU, 18, tile_px * 2.4, tile_px * 0.07, 0.5)
